@@ -1,5 +1,5 @@
 # model edit
-cfg_model = {'spectrogram': [64, 64, 128, 'M', 128, 'M', 128, 'M', 256 'M', 512, 512, 512]}
+cfg_model = {'spectrogram': [64, 64, 128, 'M', 128, 'M', 128, 'M', 256 'M', 512, 512]}
 
 class Configure():
     def make_configure(cfg_type="spectrogram"):

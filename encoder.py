@@ -30,11 +30,19 @@ class Encoder(nn.Module):
         for v in cfg:
             if v == 'M':
                 layer.append(nn.MaxPool2d(in_channel))
-            elif:
+            elif v == 'A':
+                layer.append(nn.AvgPool2d((6,1), stride=1))
+            else:
                 layer.append(nn.Conv2(input_channel, v, kenrel_size=4, stride=1))
                 layer.append(nn.ReLU())
                 layer.append(nn.BatchNorm2d(v))
                 input_channel = v
+
+        layer.append(nn.Conv2(input_channel, v, kenrel_size=4, stride=1))
+        layer.append(nn.AvgPool2d((6,1), stride=1))
+        layer.append(nn.ReLU())
+        layer.append(nn.BatchNorm2d(v))
+
 
     def _initialize_weights(self):
          for module in self.modules():
