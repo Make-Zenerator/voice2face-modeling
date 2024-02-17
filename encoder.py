@@ -1,19 +1,56 @@
-import torch
+import math
 import torch.nn as nn
 import torch.nn.functional as F
 
 
-class Encoder(nn.Module):
+class SpeechEncoder(nn.Module):
     def __init__(self, config, init_weights=True):
-        self.net = build_model(config)
+        super(SpeechEncoder, self).__init__()
+        self.net = nn.Sequential(
+            nn.Conv2d(2, 64, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(64),
+            nn.Conv2d(64, 64, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(64),
+            nn.Conv2d(64, 128, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(128),
+            nn.MaxPool2d(128),
+            nn.Conv2d(128, 128, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(128),
+            nn.MaxPool2d(128),
+            nn.Conv2d(128, 128, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(128),
+            nn.MaxPool2d(128),
+            nn.Conv2d(128, 256, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(256),
+            nn.MaxPool2d(256),
+            nn.Conv2d(256, 512, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(512),
+            nn.Conv2d(512, 512, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(512),
+            nn.Conv2d(512, 512, kernel_size=4, stride=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(512),
+            nn.Conv2d(512, 512, kernel_size=4, stride=1),
+            nn.AvgPool2d((6,1), stride=1),
+            nn.ReLU(),
+            nn.BatchNorm2d(512),
+        )
 
-        self.fc_net = nn.Sequential([
+        self.fc_net = nn.Sequential(
             nn.Linear(4096, 4096, bias=True),
             nn.ReLU(),
             nn.Dropout(0.1),
-            nn.Linear(4096, 4096, biat=True),
+            nn.Linear(4096, 4096, bias=True),
             nn.ReLU()
-        ])
+        )
 
         if init_weights:
             self._initialize_weights()
@@ -23,26 +60,6 @@ class Encoder(nn.Module):
         out = out.view(-1)
         out = self.fc_net(out)
         return out
-
-    def make_layers(cfg):
-        layer = []
-        input_channel = 2
-        for v in cfg:
-            if v == 'M':
-                layer.append(nn.MaxPool2d(in_channel))
-            elif v == 'A':
-                layer.append(nn.AvgPool2d((6,1), stride=1))
-            else:
-                layer.append(nn.Conv2(input_channel, v, kenrel_size=4, stride=1))
-                layer.append(nn.ReLU())
-                layer.append(nn.BatchNorm2d(v))
-                input_channel = v
-
-        layer.append(nn.Conv2(input_channel, v, kenrel_size=4, stride=1))
-        layer.append(nn.AvgPool2d((6,1), stride=1))
-        layer.append(nn.ReLU())
-        layer.append(nn.BatchNorm2d(v))
-
 
     def _initialize_weights(self):
          for module in self.modules():
