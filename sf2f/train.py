@@ -61,7 +61,7 @@ def main():
     s2f_val_evaluator = S2fEvaluator(
         val_loader,
         options,
-        extraction_size=[100,200,300],
+        extraction_size=100, #[100,200,300],
         hq_emb_dict=True,
         face_gen_mode=s2f_face_gen_mode)
     # Get total number of people in training set
