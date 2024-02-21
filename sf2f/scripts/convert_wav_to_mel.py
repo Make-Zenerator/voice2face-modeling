@@ -24,6 +24,7 @@ import sys
 sys.path.append('./')
 from utils.wav2mel import wav_to_mel
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from utils.filter_pickle import filtering_pickle
 
 
 VOX_DIR = os.path.join('./data/VoxCeleb')
@@ -148,7 +149,8 @@ class WavConvertor:
     def create_output_dirs(self):
         self.vox1_mel = os.path.join(VOX_DIR, 'vox1', 'mel_spectrograms')
         # self.vox2_mel = os.path.join(VOX_DIR, 'vox2', 'mel_spectrograms')
-        gfile.mkdir(self.vox1_mel)
+        if not gfile.exists(self.vox1_mel):
+            gfile.mkdir(self.vox1_mel)
         # gfile.mkdir(self.vox2_mel)
 
     def _worker(self, job_id, infos):
@@ -203,6 +205,9 @@ def main():
     #wav_convertor.convert_identity(
     #    'data/VoxCeleb/raw_wav/vox1/dev/id10001/',
     #    './data/test', 'vox1')
+
+    dir_path = '../data/VoxCeleb/vox1/mel_spectrograms' # wav_convertor.vox1_mel
+    filtering_pickle(dir_path)
 
 
 if __name__ == '__main__':
