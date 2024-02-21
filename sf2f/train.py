@@ -39,6 +39,13 @@ def main():
     global args, options
     print(args)
     print(options['data'])
+    # Set random seed, deterministic
+    torch.cuda.manual_seed(args.seed)
+    torch.manual_seed(args.seed)
+    np.random.seed(args.seed)
+    random.seed(args.seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
     #visualize_attn=options['eval'].get('visualize_attn', False)
     #print('########### visualize_attn: {} ###########'.format(visualize_attn))
     float_dtype = torch.cuda.FloatTensor
