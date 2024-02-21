@@ -107,7 +107,7 @@ def main():
 
     s2f_val_evaluator, face_gen_mode = load_s2f(test_loader,
         options,
-        extraction_size=[100,200,300],
+        extraction_size=100, # [100,200,300],
         hq_emb_dict=True,
         face_gen_mode=args.face_gen_mode,
         facenet_return_pooling=args.facenet_return_pooling)

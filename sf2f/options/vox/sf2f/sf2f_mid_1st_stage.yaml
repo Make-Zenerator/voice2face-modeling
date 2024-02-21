@@ -8,7 +8,7 @@ logs:
 # data-related settings
 data:
   dataset: vox
-  data_opts_path: options/data_opts/vox.yaml
+  data_opts_path: sf2f/options/data_opts/vox.yaml
   image_size: [128, 128]
 # model related settings
 generator:
