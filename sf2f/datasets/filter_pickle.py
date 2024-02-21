@@ -21,7 +21,7 @@ def filter_pickle(mel_pickle):
     file.close()
 
 
-dir_path = './data/VoxCeleb/vox1/mel_spectrograms'
+dir_path = '../data/VoxCeleb/vox1/mel_spectrograms'
 for dir in os.listdir(dir_path):
     data_path = os.path.join(dir_path, dir) # 사람 파일
     for id in os.listdir(data_path):
