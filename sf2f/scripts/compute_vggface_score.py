@@ -257,7 +257,7 @@ def get_vggface_act(imgs):
     N_IDENTITY = 8631
     # include_top = True if args.cmd != 'extract' else False
     include_top = True
-    weight_file = 'scripts/weights/resnet50_ft_weights.pkl'
+    weight_file = 'sf2f/scripts/weights/resnet50_ft_weight.pkl'
     # mean_bgr = np.array([91.4953, 103.8827, 131.0912])  # from resnet50_ft.prototxt
     model = ResNet.resnet50(num_classes=N_IDENTITY, include_top=include_top)
     load_state_dict(model, weight_file)
