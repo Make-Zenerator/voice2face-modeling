@@ -4,7 +4,7 @@
 # Fuser: Vanilla 1-layer attention 'general'
 logs:
   name: sf2f_fuser
-  output_dir: output/
+  output_dir: sf2f/output/
 # data-related settings
 data:
   dataset: vox

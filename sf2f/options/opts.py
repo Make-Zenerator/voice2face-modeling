@@ -19,7 +19,7 @@ parser.add_argument('--eval_epochs', default=1, type=int)
 parser.add_argument('--eval_mode_after', default=10000, type=int)
 parser.add_argument('--disable_l1_loss_after', default=10000000, type=int)
 parser.add_argument('--path_opts', type=str,
-                    default='options/vg_baseline_small.yaml', help="Options.")
+                    default='sf2f/options/vox/sf2f/sf2f_fuser.yaml', help="Options.")
 
 parser.add_argument('--workers', default=8, type=int)
 

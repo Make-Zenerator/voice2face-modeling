@@ -71,6 +71,11 @@ def main():
         extraction_size=100, #[100,200,300],
         hq_emb_dict=True,
         face_gen_mode=s2f_face_gen_mode)
+
+    # [:len(checkpoint[term_name]['id_classifier.bias'])] class 맞추기
+    # if restore_path is not None and os.path.isfile(restore_path):
+    train_loader.dataset.available_names = train_loader.dataset.available_names[:729]
+   
     # Get total number of people in training set
     num_train_id = len(train_loader.dataset)
     # Initialize softmax neuron value
