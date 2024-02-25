@@ -32,3 +32,4 @@ def filtering_pickle(dir_path):
 # if __name__=="__main__":
 #     dir_path = './data/VoxCeleb/vox1/mel_spectrograms' # wav_convertor.vox1_mel
 #     filtering_pickle(dir_path)
+

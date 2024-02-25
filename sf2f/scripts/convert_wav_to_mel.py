@@ -158,7 +158,6 @@ class WavConvertor:
                 self.convert_identity(info[0], info[1], info[2])
                 print('job #{} prcess {} {} done'.format(job_id, i, info[0]))
                 shutil.rmtree(info[0]) # remove complete file
-
                 
     def convert_wav_to_mel(self, n_jobs=1):
 
@@ -208,7 +207,7 @@ def main():
     #    'data/VoxCeleb/raw_wav/vox1/dev/id10001/',
     #    './data/test', 'vox1')
 
-    dir_path = './data/VoxCeleb/vox1/mel_spectrograms' # wav_convertor.vox1_mel
+    dir_path = './sf2f/data/VoxCeleb/vox1/mel_spectrograms' # wav_convertor.vox1_mel
     filtering_pickle(dir_path)
 
 
