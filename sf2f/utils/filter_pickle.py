@@ -26,3 +26,9 @@ def filtering_pickle(dir_path):
         for id in os.listdir(data_path):
             data = os.path.join(data_path, id)
             check_pickle(data)
+    print("Filtering Done.")
+
+
+# if __name__=="__main__":
+#     dir_path = './data/VoxCeleb/vox1/mel_spectrograms' # wav_convertor.vox1_mel
+#     filtering_pickle(dir_path)
