@@ -168,3 +168,4 @@ data/
 .vscode/
 output/
 requirements.txt
+wandb

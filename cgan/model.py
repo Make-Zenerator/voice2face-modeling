@@ -18,10 +18,7 @@ class ConditionalGenrator(nn.Module):
             nn.Linear(noise_dim + condition_dim, 512),
             nn.BatchNorm1d(512),
             GLU(),
-            nn.Linear(256, 1024),
-            nn.BatchNorm1d(1024),
-            GLU(),
-            nn.Linear(512, 2048),
+            nn.Linear(256, 2048),
             nn.BatchNorm1d(2048),
             GLU(),
         )
@@ -30,20 +27,17 @@ class ConditionalGenrator(nn.Module):
         self.transpose_conv = nn.Sequential(
             nn.BatchNorm2d(1),
             nn.ReLU(),
-            nn.ConvTranspose2d(1, 32, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(32),
-            nn.LeakyReLU(0.2),
-            nn.ConvTranspose2d(32, 64, kernel_size=4, stride=2, padding=1),
-            nn.BatchNorm2d(64),
-            nn.LeakyReLU(0.2),
-            nn.ConvTranspose2d(64, 128, kernel_size=4, stride=2, padding=1),
+            nn.ConvTranspose2d(1, 128, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(128),
-            nn.LeakyReLU(),
-            nn.Conv2d(128, 32, kernel_size=3, stride=1, padding=1),
+            nn.LeakyReLU(0.2),
+            nn.ConvTranspose2d(128, 32, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(32),
+            nn.LeakyReLU(0.2),
+            nn.ConvTranspose2d(32, 8, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(8),
             nn.LeakyReLU(),
-            nn.Conv2d(32, 3, kernel_size=3, stride=1, padding=1),
-            nn.Tanh()
+            nn.ConvTranspose2d(8, 3, kernel_size=4, stride=2, padding=1),
+            nn.Sigmoid()
         )
 
     def forward(self, noise, condition):
@@ -71,18 +65,23 @@ class Discriminator(nn.Module):
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
             nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
             nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(128),
             nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
             nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(128),
             nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
             nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
             nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(2),
         )
         self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
         self.fc_layer = nn.Sequential(
@@ -93,6 +92,7 @@ class Discriminator(nn.Module):
     def forward(self, x):
         batch_size = x.size(0)
         out = self.conv_layers(x)
+        out = self.global_avg_pool(out)
         out = out.view(batch_size, -1)
         out = self.fc_layer(out)
         return out
