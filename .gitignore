@@ -164,7 +164,20 @@ data/
 *.npy
 *.ipynb
 *.pkl
+*.png
+*.jpg
+*.mp4
+*.zip
+*.onnx
+*.tar
+*.ipynb
 
 .vscode/
 output/
 requirements.txt
+SimSwap/arcface_model/
+SimSwap/checkpoints/
+SimSwap/demo_file/
+SimSwap/output/
+SimSwap/parsing_model/checkpoint/
+
