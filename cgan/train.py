@@ -1,5 +1,5 @@
 import os
-import time
+from datetime import datetime
 import torch
 import torch.nn as nn
 from torch.optim import Adam
@@ -22,8 +22,8 @@ def custom_collate_fn(batch):
 # 하이퍼파라미터 설정
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 lr = 0.0002
-batch_size = 64
-valid_batch_size = 64
+batch_size = 32
+valid_batch_size = 32
 epochs = 10000
 noise_dim = 100
 condition_dim = 9  # 성별 및 나이 조건에 따른 차원
@@ -53,12 +53,13 @@ optimizer_G = Adam(generator.parameters(), lr=lr, betas=(0.5, 0.999))
 optimizer_D = Adam(discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
 # optimizer_D_Gender = Adam(gender_discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
 # optimizer_D_Age = Adam(age_discriminator.parameters(), lr=lr, betas=(0.5, 0.999))
-start_time = time.time()
+start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 wandb.init(project="Voice2Face",)
 wandb.run.name = f"Conditional_GAN_{start_time}"
 
 if not os.path.exists(f"output/{start_time}"): 
     os.makedirs(f"output/{start_time}") 
+
 
 # 학습 루프
 best_fid = float('inf')
@@ -107,9 +108,9 @@ for epoch in range(epochs):
         fid = calculate_fid(generator, val_loader, valid_batch_size)
         wandb.log({"fid score" : fid})
 
-        if (epoch+1) % 500 == 0:            
-            torch.save(generator.state_dict(), f"output/{start_time}/generator_{epoch}.pth")
-            torch.save(discriminator.state_dict(), f"output/{start_time}/discriminator_{epoch}.pth")
+
+        torch.save(generator.state_dict(), f"output/{start_time}/generator_{epoch}.pth")
+        torch.save(discriminator.state_dict(), f"output/{start_time}/discriminator_{epoch}.pth")
         # FID 및 IS가 임계값 이내일 때 모델 저장
         if fid < best_fid:
             best_fid = fid
