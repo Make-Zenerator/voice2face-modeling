@@ -17,7 +17,7 @@ from torchvision import transforms
 from models.models import create_model
 from options.test_options import TestOptions
 from insightface_func.face_detect_crop_single import Face_detect_crop
-from util.videoswap import video_swap
+from util.gifswap import gif_swap
 import os
 
 def lcm(a, b): return abs(a * b) / fractions.gcd(a, b) if a and b else 0
@@ -37,8 +37,7 @@ transformer_Arcface = transforms.Compose([
 #         transforms.Normalize([-0.485, -0.456, -0.406], [1, 1, 1])
 #     ])
 
-
-if __name__ == '__main__':
+def main():
     opt = TestOptions().parse()
 
     start_epoch, epoch_iter = 1, 0
@@ -55,7 +54,7 @@ if __name__ == '__main__':
     model.eval()
 
 
-    app = Face_detect_crop(name='antelope', root='./insightface_func/models')
+    app = Face_detect_crop(name='antelope', root='./SimSwap/insightface_func/models')
     app.prepare(ctx_id= 0, det_thresh=0.6, det_size=(640,640),mode=mode)
     with torch.no_grad():
         pic_a = opt.pic_a_path
@@ -82,5 +81,12 @@ if __name__ == '__main__':
         latend_id = model.netArc(img_id_downsample)
         latend_id = F.normalize(latend_id, p=2, dim=1)
 
-        video_swap(opt.video_path, latend_id, model, app, opt.output_path,temp_results_dir=opt.temp_path,\
-            no_simswaplogo=opt.no_simswaplogo,use_mask=opt.use_mask,crop_size=crop_size)
+        frames, fps = gif_swap(opt.video_path, latend_id, model, app, opt.output_path,temp_results_dir=opt.temp_path,\
+                        no_simswaplogo=opt.no_simswaplogo,use_mask=opt.use_mask,crop_size=crop_size)
+        
+    return frames, fps
+
+
+if __name__ == '__main__':
+    main()
+
