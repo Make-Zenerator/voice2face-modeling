@@ -72,8 +72,8 @@ def postprocess(swapped_face, target, target_mask,smooth_mask):
     result = result[:,:,::-1]# .astype(np.uint8)
     return result
 
-def reverse2wholeimage(b_align_crop_tenor_list,swaped_imgs, mats, crop_size, oriimg, logoclass, save_path = '', \
-                    no_simswaplogo = False,pasring_model =None,norm = None, use_mask = False):
+def reverse2wholeimage(b_align_crop_tenor_list, swaped_imgs, mats, crop_size, oriimg, logoclass, save_path='', \
+                    no_simswaplogo=False, pasring_model=None, norm=None, use_mask=False):
 
     target_image_list = []
     img_mask_list = []
@@ -85,7 +85,7 @@ def reverse2wholeimage(b_align_crop_tenor_list,swaped_imgs, mats, crop_size, ori
     # print(len(swaped_imgs))
     # print(mats)
     # print(len(b_align_crop_tenor_list))
-    for swaped_img, mat ,source_img in zip(swaped_imgs, mats,b_align_crop_tenor_list):
+    for swaped_img, mat ,source_img in zip(swaped_imgs, mats, b_align_crop_tenor_list):
         swaped_img = swaped_img.cpu().detach().numpy().transpose((1, 2, 0))
         img_white = np.full((crop_size,crop_size), 255, dtype=float)
 
@@ -170,6 +170,7 @@ def reverse2wholeimage(b_align_crop_tenor_list,swaped_imgs, mats, crop_size, ori
         img = img_mask * target_image + (1-img_mask) * img
         
     final_img = img.astype(np.uint8)
-    if not no_simswaplogo:
-        final_img = logoclass.apply_frames(final_img)
-    cv2.imwrite(save_path, final_img)
+    # if not no_simswaplogo:
+    #     final_img = logoclass.apply_frames(final_img)
+    cv2.imwrite(save_path, final_img) # swap img 저장
+    return final_img

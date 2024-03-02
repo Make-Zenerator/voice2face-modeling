@@ -55,7 +55,7 @@ if __name__ == '__main__':
     model.eval()
 
 
-    app = Face_detect_crop(name='antelope', root='./insightface_func/models')
+    app = Face_detect_crop(name='antelope', root='./SimSwap/insightface_func/models')
     app.prepare(ctx_id= 0, det_thresh=0.6, det_size=(640,640),mode=mode)
     with torch.no_grad():
         pic_a = opt.pic_a_path
