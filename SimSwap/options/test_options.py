@@ -22,7 +22,7 @@ class TestOptions(BaseOptions):
         self.parser.add_argument("--export_onnx", type=str, help="export ONNX model to a given file")
         self.parser.add_argument("--engine", type=str, help="run serialized TRT engine")
         self.parser.add_argument("--onnx", type=str, help="run ONNX model via TRT")        
-        self.parser.add_argument("--Arc_path", type=str, default='arcface_model/arcface_checkpoint.tar', help="run ONNX model via TRT")
+        self.parser.add_argument("--Arc_path", type=str, default='SimSwap/arcface_model/arcface_checkpoint.tar', help="run ONNX model via TRT")
         self.parser.add_argument("--pic_a_path", type=str, default='G:/swap_data/ID/elon-musk-hero-image.jpeg', help="Person who provides identity information")
         self.parser.add_argument("--pic_b_path", type=str, default='./demo_file/multi_people.jpg', help="Person who provides information other than their identity")
         self.parser.add_argument("--pic_specific_path", type=str, default='./crop_224/zrf.jpg', help="The specific person to be swapped")

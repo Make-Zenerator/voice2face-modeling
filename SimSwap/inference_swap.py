@@ -81,8 +81,8 @@ def main():
         latend_id = model.netArc(img_id_downsample)
         latend_id = F.normalize(latend_id, p=2, dim=1)
 
-        frames, fps = gif_swap(opt.video_path, latend_id, model, app, opt.output_path,temp_results_dir=opt.temp_path,\
-                        no_simswaplogo=opt.no_simswaplogo,use_mask=opt.use_mask,crop_size=crop_size)
+        frames, fps = gif_swap(opt.video_path, latend_id, model, app, opt.output_path, temp_results_dir=opt.temp_path,\
+                        no_simswaplogo=opt.no_simswaplogo, use_mask=True, crop_size=crop_size)
         
     return frames, fps
 

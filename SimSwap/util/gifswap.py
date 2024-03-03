@@ -76,8 +76,8 @@ def gif_swap(video_path, id_vetor, swap_model, detect_model, save_path, temp_res
 
             if detect_results is not None:
                 # print(frame_index)
-                if not os.path.exists(temp_results_dir):
-                        os.mkdir(temp_results_dir)
+                # if not os.path.exists(temp_results_dir):
+                #         os.mkdir(temp_results_dir)
                 frame_align_crop_list = detect_results[0]
                 frame_mat_list = detect_results[1]
                 swap_result_list = []
