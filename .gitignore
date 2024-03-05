@@ -172,3 +172,4 @@ wandb
 log
 results
 checkpoints
+nohup*

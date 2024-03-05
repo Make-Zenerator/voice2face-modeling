@@ -78,6 +78,85 @@ class UNet(nn.Module):
         x = torch.tanh(dec1)
 
         return x
+   
+class ConditionalUNetGAN(nn.Module):
+    def __init__(self, noise_dim=100, nch_in=3, nch_out=3, condition_dim=9, nch_ker=64, norm='bnorm'):
+        super(ConditionalUNetGAN, self).__init__()
+
+        self.noise_dim = noise_dim
+        self.nch_in = nch_in
+        self.nch_out = nch_out
+        self.nch_ker = nch_ker
+        self.norm = norm
+        self.condition_dim = condition_dim
+
+        if norm == 'bnorm':
+            self.bias = False
+        else:
+            self.bias = True
+
+        self.fc1 = nn.Sequential(
+            nn.Linear(self.noise_dim+self.condition_dim,  2 * self.nch_ker),
+            nn.ReLU(0.2),
+            nn.Dropout(0.1)
+        )
+        self.fc2 = nn.Sequential(
+            nn.Linear(2 * self.nch_ker,  4 * self.nch_ker),
+            nn.ReLU(0.2),
+            nn.Dropout(0.1)
+        )
+        self.fc3 = nn.Sequential(
+            nn.Linear(4 * self.nch_ker,  16 * self.nch_ker),
+            nn.ReLU(0.2),
+            nn.Dropout(0.1)
+        )
+        self.fc4 = nn.Sequential(
+            nn.Linear(16 * self.nch_ker,  32 * self.nch_ker),
+            nn.ReLU(0.2),
+            nn.Dropout(0.1)
+        )
+        self.fc5 = nn.Sequential(
+            nn.Linear(32 * self.nch_ker,  self.nch_ker * self.nch_ker),
+            nn.ReLU(0.2),
+        )
+        self.fc6 = nn.Linear(self.nch_ker * self.nch_ker,  3 * self.nch_ker * self.nch_ker)
+
+        self.enc1 = CNR2d(1 * self.nch_in,  1 * self.nch_ker, stride=2, norm=self.norm, relu=0.2, drop=[])
+        self.enc2 = CNR2d(1 * self.nch_ker, 2 * self.nch_ker, stride=2, norm=self.norm, relu=0.2, drop=[])
+        self.enc3 = CNR2d(2 * self.nch_ker, 4 * self.nch_ker, stride=2, norm=self.norm, relu=0.2, drop=[])
+        self.enc4 = CNR2d(4 * self.nch_ker, 8 * self.nch_ker, stride=2, norm=self.norm, relu=0.2, drop=[])
+
+        self.upc4 = DECNR2d(1 * 8 * self.nch_ker, 4 * self.nch_ker, stride=2, norm=self.norm, relu=0.0, drop=[])
+        self.upc3 = DECNR2d(2 * 4 * self.nch_ker, 2 * self.nch_ker, stride=2, norm=self.norm, relu=0.0, drop=[])
+        self.upc2 = DECNR2d(2 * 2 * self.nch_ker, 1 * self.nch_ker, stride=2, norm=self.norm, relu=0.0, drop=[])
+        self.upc1 = DECNR2d(2 * 1 * self.nch_ker, 1 * self.nch_out, stride=2, norm=[],        relu=[],  drop=[], bias=False)
+
+    def forward(self, noise, labels):
+        batch_size = noise.size(0)
+
+        x = torch.cat((noise, labels), -1)
+        x = self.fc1(x)
+        x = self.fc2(x)
+        x = self.fc3(x)
+        x = self.fc4(x)
+        x = self.fc5(x)
+        x = self.fc6(x)
+
+        x = x.reshape(batch_size, 3, 64, 64)
+
+        enc1 = self.enc1(x)
+        enc2 = self.enc2(enc1)
+        enc3 = self.enc3(enc2)
+        enc4 = self.enc4(enc3)
+
+        upc4 = self.upc4(enc4)
+        upc3 = self.upc3(torch.cat([enc3, upc4], dim=1))
+        upc2 = self.upc2(torch.cat([enc2, upc3], dim=1))
+        upc1 = self.upc1(torch.cat([enc1, upc2], dim=1))
+
+        x = torch.tanh(upc1)
+
+        return x
 
 
 class ResNet(nn.Module):

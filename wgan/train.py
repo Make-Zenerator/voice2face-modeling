@@ -1,4 +1,4 @@
-from models import DCGAN, Discriminator, init_net, ConditionMLPGAN, ConditionEmbeddingGAN, ConditioEmbeddingDiscriminator, UNet
+from models import DCGAN, Discriminator, init_net, ConditionMLPGAN, ConditionEmbeddingGAN, ConditioEmbeddingDiscriminator, UNet, ConditionalUNetGAN
 from dataset import HQVoxceleb, CelebADataset
 import torchvision.datasets as datasets
 from layer import GradientPaneltyLoss
@@ -75,12 +75,12 @@ class Train:
         else:
             self.device = torch.device("cpu")
 
-    def save(self, dir_chck, netG, netU, netD, optimG, optimU, optimD, epoch):
+    def save(self, dir_chck, netG, netD, optimG, optimD, epoch):
         if not os.path.exists(os.path.join(dir_chck,self.start_time)):
             os.makedirs(os.path.join(dir_chck,self.start_time))
 
-        torch.save({'netG': netG.state_dict(), 'netU': netU.state_dict(), 'netD': netD.state_dict(),
-                    'optimG': optimG.state_dict(), 'optimU': optimU.state_dict(), 'optimD': optimD.state_dict()},
+        torch.save({'netG': netG.state_dict(), 'netD': netD.state_dict(),
+                    'optimG': optimG.state_dict(), 'optimD': optimD.state_dict()},
                    '%s/%s/model_epoch%04d.pth' % (dir_chck, self.start_time, epoch))
 
     def load(self, ckpt, netG, netD=[], optimG=[], optimD=[], epoch=[], mode='train'):
@@ -169,24 +169,21 @@ class Train:
 
         ## setup network
         # netG = DCGAN(nch_in+condition_dim, nch_out, nch_ker, norm)
-        netG = ConditionEmbeddingGAN(nch_in=nch_in, condition_dim=9, nch_ker=64)
-        netU = UNet(nch_in=3, nch_out=3)
+        # netG = ConditionEmbeddingGAN(nch_in=nch_in, condition_dim=9, nch_ker=64)
+        netG = ConditionalUNetGAN(noise_dim=100, nch_in=3, condition_dim=9, nch_out=3)
         # netD = Discriminator(nch_out, nch_ker, [])
         netD = ConditioEmbeddingDiscriminator(input_size=(self.nch_out,self.nx_out,self.ny_out), nch_ker=64, condition_dim=9)
 
         init_net(netG, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
-        init_net(netU, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
         init_net(netD, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
 
         ## setup loss & optimization
         fn_GP = GradientPaneltyLoss().to(device)
 
         paramsG = netG.parameters()
-        paramsU = netU.parameters()
         paramsD = netD.parameters()
 
         optimG = torch.optim.Adam(paramsG, lr=lr_G, betas=(self.beta1, 0.999))
-        optimU = torch.optim.Adam(paramsU, lr=lr_U, betas=(self.beta1, 0.999))
         optimD = torch.optim.Adam(paramsD, lr=lr_D, betas=(self.beta1, 0.999))
 
         # schedG = get_scheduler(optimG, self.opts)
@@ -207,11 +204,9 @@ class Train:
         for epoch in range(st_epoch + 1, num_epoch + 1):
             ## training phase
             netG.train()
-            netU.train()
             netD.train()
 
             loss_G_train = []
-            loss_U_train = []
             loss_D_real_train = []
             loss_D_fake_train = []
 
@@ -233,17 +228,16 @@ class Train:
                 # input = input.unsqueeze(2).unsqueeze(2)
                 # forward netG
                 output = netG(input, condition)
-                unet_output = netU(output)
 
                 # backward netD
                 set_requires_grad(netD, True)
                 optimD.zero_grad()
 
                 pred_real = netD(images, condition)
-                pred_fake = netD(unet_output.detach(), condition)
+                pred_fake = netD(output, condition)
 
                 alpha = torch.rand(batch_size, 1, 1, 1).to(self.device)
-                output_ = (alpha * images + (1 - alpha) * unet_output.detach()).requires_grad_(True)
+                output_ = (alpha * images + (1 - alpha) * pred_real.detach()).requires_grad_(True)
                 src_out_ = netD(output_, condition)
 
                 # BCE Loss
@@ -260,40 +254,34 @@ class Train:
                 loss_D = 0.5 * (loss_D_real + loss_D_fake) + loss_D_gp
                 # loss_D = 0.5 * (loss_D_real + loss_D_fake)
 
-                loss_D.backward()
+                loss_D.backward(retain_graph=True)
                 optimD.step()
 
-                # backward netG
+
                 set_requires_grad(netD, False)
+                # backward netG
                 optimG.zero_grad()
-                optimU.zero_grad()
-
-                pred_fake = netD(unet_output, condition)
-
-                # loss_G = fn_GAN(pred_fake, torch.ones_like(pred_fake))
+                
+                pred_fake = netD(output, condition)
                 loss_G = torch.mean(pred_fake)
-                loss_U = torch.mean(pred_fake)
                 loss_G.backward()
-                loss_U.backward()
-
                 optimG.step()
-                optimU.step()
+                
 
                 # get losses
                 loss_G_train += [loss_G.item()]
-                loss_U_train += [loss_U.item()]
                 loss_D_real_train += [loss_D_real.item()]
                 loss_D_fake_train += [loss_D_fake.item()]
 
                 print('TRAIN: EPOCH %d: BATCH %04d/%04d: '
-                      'GEN GAN: %.4f UNET GAN: %.4f DISC FAKE: %.4f DISC REAL: %.4f' %
+                      'GEN GAN: %.4f DISC FAKE: %.4f DISC REAL: %.4f' %
                       (epoch, i, num_batch_train,
-                       mean(loss_G_train), mean(loss_U_train), mean(loss_D_fake_train), mean(loss_D_real_train)))
+                       mean(loss_G_train), mean(loss_D_fake_train), mean(loss_D_real_train)))
 
 
             ## save
             if (epoch % num_freq_save) == 0:
-                self.save(dir_chck, netG, netU, netD, optimG, optimU, optimD, epoch)
+                self.save(dir_chck, netG, netD, optimG, optimD, epoch)
 
 
     def test(self):
