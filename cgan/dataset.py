@@ -12,7 +12,7 @@ from PIL import Image
 import random
 from typing import Tuple
 
-DATA_PATH = "../data/VoxCeleb/vox1"
+DATA_PATH = "../VoxCeleb/vox1"
 FILE_NAME = "vox1_age_meta.csv"
 
 FILE_PATH = os.path.join(DATA_PATH, FILE_NAME)

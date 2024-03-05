@@ -1,10 +1,70 @@
+import os
 import torch
 from model import ConditionalGenrator
-import os
-from PIL import Image
-from datetime import datetime
 
-start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+def inference(self):
+    mode = self.mode
+
+    batch_size = self.batch_size
+    device = self.device
+    gpu_ids = self.gpu_ids
+
+    ny_in = self.ny_in
+    nx_in = self.nx_in
+
+    nch_in = self.nch_in
+    nch_out = self.nch_out
+    nch_ker = self.nch_ker
+
+    norm = self.norm
+
+    name_data = self.name_data
+    input_gender = self.input_gender
+    input_age = self.input_age
+    ## setup dataset
+    dir_chck = os.path.join(self.dir_checkpoint, self.scope, name_data)
+
+    dir_result = os.path.join(self.dir_result, self.scope, name_data)
+    dir_result_save = os.path.join(dir_result, 'images')
+    if not os.path.exists(dir_result_save):
+        os.makedirs(dir_result_save)
+
+    condition_dim = 9
+    ## setup network
+    netG = ConditionalGenrator(nch_in=nch_in, condition_dim=9, nch_ker=64)
+
+    ## load from checkpoints
+    st_epoch = 0
+
+    ckpt = os.listdir(dir_chck)
+    ckpt.sort()
+
+    for i in range(len(ckpt)):
+        ## test phase
+        model_path = os.path.join(dir_chck, ckpt[i])
+        netG = self.load(model_path, netG, mode=mode)
+        with torch.no_grad():
+
+            netG.eval()
+
+            input = torch.randn(1, nch_in).to(device)
+            noise = torch.randn(1, nch_in, device=device)
+            gender = gender_processing(input_gender, device=device)
+            age = age_processing(input_age)
+            condition = condition_processing(gender, age, device=device)
+            # input = torch.cat([input, condition], dim=1)
+            # input = input.unsqueeze(2).unsqueeze(2)
+
+            output = netG(input, condition)
+            min_ = output.min()
+            max_ = output.max()
+            clipping = ((output-min_)/(max_-min_))
+
+            output_path = "results/cgan/images"
+
+            self.save_image(clipping, output_path, i)
+
 
 def gender_processing(input_gender: int, device='cpu') -> torch.Tensor:
     gender = 0
@@ -33,37 +93,3 @@ def condition_processing(gender: torch.Tensor, age: int, device='cpu') -> torch.
     age_condition[0][age] = 1
     condition = torch.cat([gender, age_condition], dim=1).to(device)
     return condition
-
-def save_image(image, path):
-
-    if not os.path.exists(path):
-        os.mkdir(path)
-
-    img = Image.open(image)
-    img.save(os.path.join(path, f'{start_time}.jpg'), "JPEG")
-
-def main(input_gender, input_age):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model_path = "output/1709112384.74361/generator_110.pth"
-    output_path = "results/condition_result"
-    noise_dim = 100
-    condition_dim = 9
-
-    model = ConditionalGenrator(noise_dim=noise_dim, condition_dim=condition_dim).to(device)
-    model.load_state_dict(torch.load(model_path))
-    print(model.parameters)
-    model.eval()
-
-    noise = torch.randn(1, noise_dim, device=device)
-    gender = gender_processing(input_gender, device=device)
-    age = age_processing(input_age)
-    condition = condition_processing(gender, age, device=device)
-
-    result = model(noise, condition)
-    save_image(result, output_path)
-    return result
-
-if __name__ == "__main__":
-    _ = main('f', 25)
-    
-    
