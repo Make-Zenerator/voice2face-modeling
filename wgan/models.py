@@ -26,8 +26,9 @@ class DCGAN(nn.Module):
         self.dec2 = DECNR2d(2 * self.nch_ker, 1 * self.nch_ker, kernel_size=4, stride=2, padding=1, norm=self.norm, relu=0.0, drop=[])
         self.dec1 = Deconv2d(1 * self.nch_ker, 1 * self.nch_out,kernel_size=4, stride=2, padding=1, bias=False)
 
-    def forward(self, x):
+    def forward(self, img, labels):
 
+        x = torch.cat((img, labels), -1).unsqueeze(2).unsqueeze(2)
         x = self.dec5(x)
         x = self.dec4(x)
         x = self.dec3(x)
@@ -427,30 +428,28 @@ class ConditioEmbeddingDiscriminator(nn.Module):
         self.condition_dim = condition_dim
 
         self.fc1 = nn.Sequential(
-            nn.Linear(64*64*3+self.condition_dim, 2 * self.nch_ker),
+            nn.Linear(64*64*3+self.condition_dim, 8 * self.nch_ker),
             nn.ReLU(0.2),
             nn.Dropout(0.1)
         )
         self.fc2 = nn.Sequential(
-            nn.Linear(2 * self.nch_ker,  4 * self.nch_ker),
+            nn.Linear(8 * self.nch_ker,  4 * self.nch_ker),
             nn.ReLU(0.2),
             nn.Dropout(0.1)
         )
         self.fc3 = nn.Sequential(
-            nn.Linear(4 * self.nch_ker,  16 * self.nch_ker),
+            nn.Linear(4 * self.nch_ker,  2 * self.nch_ker),
             nn.ReLU(0.2),
             nn.Dropout(0.1)
         )
         self.fc4 = nn.Sequential(
-            nn.Linear(16 * self.nch_ker,  32 * self.nch_ker),
+            nn.Linear(2 * self.nch_ker,  1 * self.nch_ker),
             nn.ReLU(0.2),
             nn.Dropout(0.1)
         )
         self.fc5 = nn.Sequential(
-            nn.Linear(32 * self.nch_ker,  self.nch_ker * self.nch_ker),
-            nn.ReLU(0.2),
+            nn.Linear(1 * self.nch_ker,  1),
         )
-        self.fc6 = nn.Linear(self.nch_ker * self.nch_ker,  3 * self.nch_ker * self.nch_ker)
 
     def forward(self, img, labels):
         batch_size = img.size(0)
@@ -461,12 +460,9 @@ class ConditioEmbeddingDiscriminator(nn.Module):
         x = self.fc3(x)
         x = self.fc4(x)
         x = self.fc5(x)
-        x = self.fc6(x)
 
         x = torch.sigmoid(x)
-
-        x = x.reshape(batch_size, 3, 64, 64)
-
+        
         return x
 
 def init_weights(net, init_type='normal', init_gain=0.02):

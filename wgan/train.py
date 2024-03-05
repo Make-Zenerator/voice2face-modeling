@@ -150,7 +150,7 @@ class Train:
 
         transform = transforms.Compose([
             transforms.Resize((64, 64)),
-            transforms.RandomHorizontalFlip(p=0.5),
+            # transforms.RandomHorizontalFlip(p=0.5),
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
         ])
@@ -168,9 +168,9 @@ class Train:
         num_batch_train = int((num_train / batch_size) + ((num_train % batch_size) != 0))
 
         ## setup network
-        # netG = DCGAN(nch_in+condition_dim, nch_out, nch_ker, norm)
+        netG = DCGAN(nch_in+condition_dim, nch_out, nch_ker, norm)
         # netG = ConditionEmbeddingGAN(nch_in=nch_in, condition_dim=9, nch_ker=64)
-        netG = ConditionalUNetGAN(noise_dim=100, nch_in=3, condition_dim=9, nch_out=3)
+        # netG = ConditionalUNetGAN(noise_dim=100, nch_in=3, condition_dim=9, nch_out=3)
         # netD = Discriminator(nch_out, nch_ker, [])
         netD = ConditioEmbeddingDiscriminator(input_size=(self.nch_out,self.nx_out,self.ny_out), nch_ker=64, condition_dim=9)
 
@@ -234,11 +234,15 @@ class Train:
                 optimD.zero_grad()
 
                 pred_real = netD(images, condition)
-                pred_fake = netD(output, condition)
+                pred_fake = netD(output.detach(), condition)
+
+                # pred_real = netD(images)
+                # pred_fake = netD(output.detach())
 
                 alpha = torch.rand(batch_size, 1, 1, 1).to(self.device)
-                output_ = (alpha * images + (1 - alpha) * pred_real.detach()).requires_grad_(True)
+                output_ = (alpha * images + (1 - alpha) * output.detach()).requires_grad_(True)
                 src_out_ = netD(output_, condition)
+                # src_out_ = netD(output_)
 
                 # BCE Loss
                 # loss_D_real = fn_GAN(pred_real, torch.ones_like(pred_real))
@@ -263,6 +267,7 @@ class Train:
                 optimG.zero_grad()
                 
                 pred_fake = netD(output, condition)
+                # pred_fake = netD(output)
                 loss_G = torch.mean(pred_fake)
                 loss_G.backward()
                 optimG.step()
@@ -385,7 +390,7 @@ class Train:
 
         condition_dim = 9
         ## setup network
-        netG = ConditionEmbeddingGAN(nch_in=nch_in, condition_dim=9, nch_ker=64)
+        netG = ConditionalUNetGAN()
         # netG = DCGAN(nch_in+condition_dim, nch_out, nch_ker, norm)
         init_net(netG, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
 
