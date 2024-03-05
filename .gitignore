@@ -169,3 +169,6 @@ data/
 output/
 requirements.txt
 wandb
+log
+results
+checkpoints
