@@ -497,9 +497,9 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
 
 
 ## finetuning gan
-class ConditionEmbeddingFrozenGAN(nn.Module):
+class ConditionFinetuneGAN(nn.Module):
     def __init__(self, nch_in, nch_out=3, nch_ker=64, norm='bnorm'):
-        super(ConditionEmbeddingFrozenGAN, self).__init__()
+        super(ConditionFinetuneGAN, self).__init__()
 
         self.nch_in = nch_in
         self.nch_ker = nch_ker

@@ -7,7 +7,7 @@ from models import (DCGAN,
                     UNet,
                     ConditionalUNetGAN,
                     ConditionConvGenerator,
-                    ConditionEmbeddingFrozenGAN,
+                    ConditionFinetuneGAN,
                     ConditionLinearFinetuneGAN
                     )
 from dataset import HQVoxceleb, CelebADataset
@@ -191,7 +191,7 @@ class Train:
         # netG = DCGAN(nch_in+condition_dim, nch_out, nch_ker, norm)
         # netG = ConditionMLPGAN(nch_in=(nch_in+condition_dim))
         # netG = ConditionConvGenerator()
-        # netG = ConditionEmbeddingFrozenGAN(nch_in=nch_in)
+        # netG = ConditionFinetuneGAN(nch_in=nch_in)
         # netG = ConditionEmbeddingGAN(nch_in=nch_in, condition_dim=9, nch_ker=64)
         # netG = ConditionalUNetGAN(noise_dim=100, nch_in=3, condition_dim=9, nch_out=3)
         netG = ConditionLinearFinetuneGAN(nch_in=nch_in)
@@ -529,7 +529,8 @@ class Train:
         condition_dim = 9
         ## setup network
         # netG = ConditionConvGenerator()
-        netG = ConditionEmbeddingFrozenGAN(nch_in=nch_in)
+        # netG = ConditionLinearFinetuneGAN(nch_in=nch_in)
+        netG = ConditionLinearFinetuneGAN(nch_in=nch_in)
         # netG = DCGAN(nch_in+condition_dim, nch_out, nch_ker, norm)
         init_net(netG, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
 
