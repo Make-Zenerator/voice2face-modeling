@@ -332,10 +332,10 @@ class Train:
             optimG = torch.optim.Adam(paramsG, lr=1e-5, betas=(self.beta1, 0.999))
             optimD = torch.optim.Adam(paramsD, lr=1e-5, betas=(self.beta1, 0.999))
 
-            dir_chck = os.path.join(dir_chck, self.start_time)
+            dir_chck = os.path.join(dir_chck, "20240306_142136")
             ckpt = os.listdir(dir_chck)
             ckpt.sort()
-            file_path = os.path.join(dir_chck, ckpt[-1])
+            file_path = os.path.join(dir_chck, ckpt[0])
             netG, netD, optimG, optimD, st_epoch = self.load(file_path, netG, netD, optimG, optimD, mode=mode)
             new_sequence = nn.Sequential(
                 nn.Linear(in_features=(nch_in+nch_ker//4+nch_ker//4), out_features=2*nch_ker),
@@ -343,8 +343,8 @@ class Train:
                 nn.Dropout(0.1)
             )
             netG.fc1 = new_sequence
-            netG = netG.to(device)
             netG.set_fine_tune(True)
+            netG = netG.to(device)
             dir_chck = os.path.join(dir_chck, "fine_tuning")
             for epoch in range(fine_tune_num_epoch + 1):
                 ## training phase
@@ -362,10 +362,12 @@ class Train:
                     images, gender_labels, age_labels = data
                     images = images.to(device)
                     batch_size = images.size(0)
+                    gender_labels = gender_labels.unsqueeze(1)
+                    gender_conditions = torch.zeros(batch_size, 2)
+                    gender_conditions = gender_conditions.scatter_(1, gender_labels, 1).to(device)
                     age_labels = age_labels.unsqueeze(1)
                     age_conditions = torch.zeros(batch_size, 8)
-                    age_conditions.scatter_(1, age_labels, 1)
-                    gender_conditions = gender_labels.unsqueeze(1)
+                    age_conditions = age_conditions.scatter_(1, age_labels, 1).to(device)      
                     # conditions = torch.cat([gender_conditions, age_conditions], dim=1).to(device) 
                     input = torch.randn(batch_size, nch_in).to(device)
                     # input = torch.cat([input, conditions], dim=1)
@@ -584,15 +586,17 @@ class Train:
             os.mkdir(folder_path)
         img.save(os.path.join(folder_path, f'{num}.jpeg'), "JPEG")
 
-def gender_processing(input_gender: int, device='cpu') -> torch.Tensor:
-    gender = 0
-    if input_gender in ['m', 'male', 'man']:
+def gender_processing(input_genders, device='cpu') -> torch.Tensor:
+    batch_size = input_genders.size(0)
+    gender_tensors = torch.zeros((batch_size, 2))
+    for i, input_gender in enumerate(input_genders):
         gender = 0
-    elif input_gender in ['f', 'female', 'woman']:
-        gender = 1
-    gender_tensor = torch.zeros((1,2)).to(device)
-    gender_tensor[gender] = torch.tensor(1)
-    return gender_tensor
+        if input_gender in ['m', 'male', 'man'] or input_gender == 0 :
+            gender = 0
+        elif input_gender in ['f', 'female', 'woman'] or input_gender == 1:
+            gender = 1
+        gender_tensors[i][gender] = torch.tensor(1)
+    return gender_tensors
 
 def age_processing(input_age):
     if type(input_age) == str:
