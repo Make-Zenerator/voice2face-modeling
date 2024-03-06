@@ -8,7 +8,8 @@ from models import (DCGAN,
                     ConditionalUNetGAN,
                     ConditionConvGenerator,
                     ConditionFinetuneGAN,
-                    ConditionLinearFinetuneGAN
+                    ConditionLinearFinetuneGAN,
+                    ConditionLinearFinetuneDiscriminator
                     )
 from dataset import HQVoxceleb, CelebADataset
 import torchvision.datasets as datasets
@@ -195,7 +196,8 @@ class Train:
         # netG = ConditionEmbeddingGAN(nch_in=nch_in, condition_dim=9, nch_ker=64)
         # netG = ConditionalUNetGAN(noise_dim=100, nch_in=3, condition_dim=9, nch_out=3)
         netG = ConditionLinearFinetuneGAN(nch_in=nch_in)
-        netD = Discriminator(nch_out, nch_ker, [])
+        # netD = Discriminator(nch_out, nch_ker, [])
+        netD = ConditionLinearFinetuneDiscriminator()
         # netD = ConditioEmbeddingDiscriminator(input_size=(self.nch_out,self.nx_out,self.ny_out), nch_ker=64, condition_dim=9)
 
         init_net(netG, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
@@ -319,7 +321,8 @@ class Train:
             loader_train = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=8, drop_last=True, collate_fn=self.custom_collate_fn)
 
             netG = ConditionLinearFinetuneGAN(nch_in=nch_in)
-            netD = Discriminator(nch_out, nch_ker, [])
+            # netD = Discriminator(nch_out, nch_ker, [])
+            netD = ConditionLinearFinetuneDiscriminator()
             init_net(netG, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
             init_net(netD, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
 
@@ -337,14 +340,25 @@ class Train:
             ckpt.sort()
             file_path = os.path.join(dir_chck, ckpt[0])
             netG, netD, optimG, optimD, st_epoch = self.load(file_path, netG, netD, optimG, optimD, mode=mode)
+
             new_sequence = nn.Sequential(
                 nn.Linear(in_features=(nch_in+nch_ker//4+nch_ker//4), out_features=2*nch_ker),
                 nn.LeakyReLU(0.2),
                 nn.Dropout(0.1)
             )
             netG.fc1 = new_sequence
+            new_sequence = nn.Sequential(
+                nn.Conv2d(in_channels=5, out_channels=nch_ker, kernel_size=4, stride=2, padding=1, bias=False),
+                nn.BatchNorm2d(nch_ker),
+                nn.LeakyReLU(0.2)
+            )
+            netD.dsc1 = new_sequence
+            
             netG.set_fine_tune(True)
+            netD.set_fine_tune(True)
             netG = netG.to(device)
+            netD = netD.to(device)
+
             dir_chck = os.path.join(dir_chck, "fine_tuning")
             for epoch in range(fine_tune_num_epoch + 1):
                 ## training phase

@@ -620,3 +620,59 @@ class ConditionLinearFinetuneGAN(nn.Module):
 
     def set_fine_tune(self, fine_tune):
         self.fine_tune = fine_tune
+
+## finetuning discriminator
+class ConditionLinearFinetuneDiscriminator(nn.Module):
+    def __init__(self, nch_in=3, nch_out=3, nch_ker=64, norm='bnorm', fine_tune=False):
+        super(ConditionLinearFinetuneDiscriminator, self).__init__()
+
+        self.nch_in = nch_in
+        self.nch_ker = nch_ker
+        self.norm = norm
+        self.fine_tune = fine_tune
+
+        self.gender_layer = nn.Sequential(
+            nn.Linear(2, 4*self.nch_ker*self.nck_ker),
+            nn.LeakyReLU(0.2),
+            nn.Linear(4*self.nch_ker*self.nck_ker, 4*self.nch_ker*self.nck_ker),
+            nn.LeakyReLU(0.2),
+            nn.Linear(4*self.nch_ker*self.nck_ker, self.nch_ker*self.nck_ker),
+            nn.LeakyReLU(0.2)
+        )
+        self.age_layer = nn.Sequential(
+            nn.Linear(8, 4*self.nch_ker*self.nck_ker),
+            nn.LeakyReLU(0.2),
+            nn.Linear(4*self.nch_ker*self.nck_ker, 4*self.nch_ker*self.nck_ker),
+            nn.LeakyReLU(0.2),
+            nn.Linear(4*self.nch_ker*self.nck_ker, self.nch_ker*self.nck_ker),
+            nn.LeakyReLU(0.2)
+        )
+
+        self.dsc1 = CNR2d(1 * self.nch_in,  1 * self.nch_ker, kernel_size=4, stride=2, padding=1, norm=self.norm, relu=0.2)
+        self.dsc2 = CNR2d(1 * self.nch_ker, 2 * self.nch_ker, kernel_size=4, stride=2, padding=1, norm=self.norm, relu=0.2)
+        self.dsc3 = CNR2d(2 * self.nch_ker, 4 * self.nch_ker, kernel_size=4, stride=2, padding=1, norm=self.norm, relu=0.2)
+        self.dsc4 = CNR2d(4 * self.nch_ker, 8 * self.nch_ker, kernel_size=4, stride=2, padding=1, norm=self.norm, relu=0.2)
+        self.dsc5 = CNR2d(8 * self.nch_ker, 1,                kernel_size=4, stride=1, padding=1, norm=[],        relu=[], bias=False)
+
+    def forward(self, x):
+        if self.fine_tune:
+            image, gender, age = x
+            gender = self.gender_layer(gender)
+            gender = gender.reshape(-1, 1, 64, 64)
+            age = self.age_layer(age)
+            age = age.reshape(-1, 1, 64, 64)
+            x = torch.concat((image,gender,age), dim=1)
+        x = self.dsc1(x) # fine_tune : [batch_size, 132]
+        x = self.dsc2(x)
+        x = self.dsc3(x)
+        x = self.dsc4(x)
+        x = self.dsc5(x)
+
+        x = torch.sigmoid(x)
+
+        x = x.reshape(-1, 3, 64, 64)
+
+        return x
+
+    def set_fine_tune(self, fine_tune):
+        self.fine_tune = fine_tune
