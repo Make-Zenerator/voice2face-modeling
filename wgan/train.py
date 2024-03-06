@@ -1,4 +1,4 @@
-from models import DCGAN, Discriminator, init_net, ConditionMLPGAN, ConditionEmbeddingGAN, ConditioEmbeddingDiscriminator, UNet, ConditionalUNetGAN
+from models import DCGAN, Discriminator, init_net, ConditionMLPGAN, ConditionEmbeddingGAN, ConditioEmbeddingDiscriminator, UNet, ConditionalUNetGAN, ConditionConvGenerator, ConditionEmbeddingFrozenGAN
 from dataset import HQVoxceleb, CelebADataset
 import torchvision.datasets as datasets
 from layer import GradientPaneltyLoss
@@ -68,6 +68,10 @@ class Train:
         self.input_gender = args.input_gender
         self.input_age = args.input_age
         self.start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        self.fine_tune = args.fine_tune
+        self.fine_tune_num_epoch = args.fine_tune_num_epoch
+        self.fine_tune_num_freq_save = args.fine_tune_num_freq_save
 
         if self.gpu_ids and torch.cuda.is_available():
             self.device = torch.device("cuda:%d" % self.gpu_ids[0])
@@ -148,31 +152,39 @@ class Train:
         dir_data_train = os.path.join(self.dir_data, name_data)
         dir_log = os.path.join(self.dir_log, self.scope, name_data)
 
+        fine_tune = self.fine_tune
+        fine_tune_num_epoch = self.fine_tune_num_epoch
+        fine_tune_num_freq_save = self.fine_tune_num_freq_save
+
         transform = transforms.Compose([
             transforms.Resize((64, 64)),
             # transforms.RandomHorizontalFlip(p=0.5),
             transforms.ToTensor(),
             transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5)),
         ])
-        dataset = HQVoxceleb(transform=transform)
-        train_dataset, val_dataset = dataset.split_dataset()
+        # dataset = HQVoxceleb(transform=transform)
+        dataset = CelebADataset(transform=transform)
+        # train_dataset, val_dataset = dataset.split_dataset()
 
         # dataset = CelebADataset(transform=transform)
         # dataset = datasets.CelebA(root="/workspace/CelebA", transform=transform, download=True)
 
-        loader_train = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8, drop_last=True, collate_fn=self.custom_collate_fn)
-        # loader_train = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=8, drop_last=True)
+        # loader_train = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=8, drop_last=True, collate_fn=self.custom_collate_fn)
+        loader_train = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0, drop_last=True)
 
         num_train = len(dataset)
 
         num_batch_train = int((num_train / batch_size) + ((num_train % batch_size) != 0))
 
         ## setup network
-        netG = DCGAN(nch_in+condition_dim, nch_out, nch_ker, norm)
+        # netG = DCGAN(nch_in+condition_dim, nch_out, nch_ker, norm)
+        # netG = ConditionMLPGAN(nch_in=(nch_in+condition_dim))
+        # netG = ConditionConvGenerator()
+        netG = ConditionEmbeddingFrozenGAN(nch_in=nch_in)
         # netG = ConditionEmbeddingGAN(nch_in=nch_in, condition_dim=9, nch_ker=64)
         # netG = ConditionalUNetGAN(noise_dim=100, nch_in=3, condition_dim=9, nch_out=3)
-        # netD = Discriminator(nch_out, nch_ker, [])
-        netD = ConditioEmbeddingDiscriminator(input_size=(self.nch_out,self.nx_out,self.ny_out), nch_ker=64, condition_dim=9)
+        netD = Discriminator(nch_out, nch_ker, [])
+        # netD = ConditioEmbeddingDiscriminator(input_size=(self.nch_out,self.nx_out,self.ny_out), nch_ker=64, condition_dim=9)
 
         init_net(netG, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
         init_net(netD, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
@@ -214,35 +226,35 @@ class Train:
                 def should(freq):
                     return freq > 0 and (i % freq == 0 or i == num_batch_train)
 
-                images, gender_labels, age_labels = data
-                images = images.to(device)
+                # images, gender_labels, age_labels = data
+                images = data.to(device)
                 batch_size = images.size(0)
-                age_labels = age_labels.unsqueeze(1)
-                age_condition = torch.zeros(batch_size, 8)
-                age_condition.scatter_(1, age_labels, 1)
-                gender_labels = gender_labels.unsqueeze(1)
-                condition = torch.cat([gender_labels, age_condition], dim=1).to(device) 
+                # age_labels = age_labels.unsqueeze(1)
+                # age_condition = torch.zeros(batch_size, 8)
+                # age_condition.scatter_(1, age_labels, 1)
+                # gender_labels = gender_labels.unsqueeze(1)
+                # condition = torch.cat([gender_labels, age_condition], dim=1).to(device) 
                 input = torch.randn(batch_size, nch_in).to(device)
                 # input = torch.randn(batch_size, nch_in).to(device)
                 # input = torch.cat([input, condition], dim=1)
-                # input = input.unsqueeze(2).unsqueeze(2)
+                # input = input.unsqueeze(2).unsqueeze(2) # (batch_size, noize+condition, 1, 1)
                 # forward netG
-                output = netG(input, condition)
+                # output = netG(input, condition)
+                output = netG(input)
 
                 # backward netD
                 set_requires_grad(netD, True)
                 optimD.zero_grad()
 
-                pred_real = netD(images, condition)
-                pred_fake = netD(output.detach(), condition)
-
-                # pred_real = netD(images)
-                # pred_fake = netD(output.detach())
+                # pred_real = netD(images, condition)
+                # pred_fake = netD(output.detach(), condition)
+                pred_real = netD(images)
+                pred_fake = netD(output.detach())
 
                 alpha = torch.rand(batch_size, 1, 1, 1).to(self.device)
                 output_ = (alpha * images + (1 - alpha) * output.detach()).requires_grad_(True)
-                src_out_ = netD(output_, condition)
-                # src_out_ = netD(output_)
+                # src_out_ = netD(output_, condition)
+                src_out_ = netD(output_)
 
                 # BCE Loss
                 # loss_D_real = fn_GAN(pred_real, torch.ones_like(pred_real))
@@ -266,8 +278,9 @@ class Train:
                 # backward netG
                 optimG.zero_grad()
                 
-                pred_fake = netD(output, condition)
-                # pred_fake = netD(output)
+                # pred_fake = netD(output, condition)
+                pred_fake = netD(output)
+
                 loss_G = torch.mean(pred_fake)
                 loss_G.backward()
                 optimG.step()
@@ -288,6 +301,117 @@ class Train:
             if (epoch % num_freq_save) == 0:
                 self.save(dir_chck, netG, netD, optimG, optimD, epoch)
 
+        if fine_tune:
+            
+            dataset = HQVoxceleb(transform=transform)
+            loader_train = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=8, drop_last=True, collate_fn=self.custom_collate_fn)
+
+            netG = ConditionEmbeddingFrozenGAN(nch_in=nch_in)
+            netD = Discriminator(nch_out, nch_ker, [])
+            init_net(netG, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
+            init_net(netD, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
+
+            ## setup loss & optimization
+            fn_GP = GradientPaneltyLoss().to(device)
+
+            paramsG = netG.parameters()
+            paramsD = netD.parameters()
+
+            optimG = torch.optim.Adam(paramsG, lr=1e-5, betas=(self.beta1, 0.999))
+            optimD = torch.optim.Adam(paramsD, lr=1e-5, betas=(self.beta1, 0.999))
+
+            ckpt = os.listdir(dir_chck)
+            ckpt.sort()
+            file_path = os.path.join(dir_chck, ckpt[-1])
+            netG, netD, optimG, optimD, st_epoch = self.load(file_path, netG, netD, optimG, optimD, mode=mode)
+            new_sequence = nn.Sequential(
+                nn.Linear(in_features=(nch_in+condition_dim), out_features=128),
+                nn.ReLU(0.2),
+                nn.Dropout(0.1)
+            )
+            netG.fc1 = new_sequence
+            netG = netG.to(device)
+            dir_chck = os.path.join(dir_chck, "fine_tuning")
+            for epoch in range(fine_tune_num_epoch + 1):
+                ## training phase
+                netG.train()
+                netD.train()
+
+                loss_G_train = []
+                loss_D_real_train = []
+                loss_D_fake_train = []
+
+                for i, data in enumerate(loader_train):
+                    def should(freq):
+                        return freq > 0 and (i % freq == 0 or i == num_batch_train)
+
+                    images, gender_labels, age_labels = data
+                    images = images.to(device)
+                    batch_size = images.size(0)
+                    age_labels = age_labels.unsqueeze(1)
+                    age_condition = torch.zeros(batch_size, 8)
+                    age_condition.scatter_(1, age_labels, 1)
+                    gender_labels = gender_labels.unsqueeze(1)
+                    condition = torch.cat([gender_labels, age_condition], dim=1).to(device) 
+                    input = torch.randn(batch_size, nch_in).to(device)
+                    input = torch.cat([input, condition], dim=1)
+                    output = netG(input)
+
+                    # backward netD
+                    set_requires_grad(netD, True)
+                    optimD.zero_grad()
+
+                    pred_real = netD(images)
+                    pred_fake = netD(output.detach())
+
+                    alpha = torch.rand(batch_size, 1, 1, 1).to(self.device)
+                    output_ = (alpha * images + (1 - alpha) * output.detach()).requires_grad_(True)
+                    src_out_ = netD(output_)
+
+                    # BCE Loss
+                    # loss_D_real = fn_GAN(pred_real, torch.ones_like(pred_real))
+                    # loss_D_fake = fn_GAN(pred_fake, torch.zeros_like(pred_fake))
+
+                    # WGAN Loss
+                    loss_D_real = torch.mean(pred_real)
+                    loss_D_fake = -torch.mean(pred_fake)
+
+                    # Gradient penalty Loss
+                    loss_D_gp = fn_GP(src_out_, output_)
+
+                    loss_D = 0.5 * (loss_D_real + loss_D_fake) + loss_D_gp
+                    # loss_D = 0.5 * (loss_D_real + loss_D_fake)
+
+                    loss_D.backward(retain_graph=True)
+                    optimD.step()
+
+
+                    set_requires_grad(netD, False)
+                    # backward netG
+                    optimG.zero_grad()
+                    
+                    # pred_fake = netD(output, condition)
+                    pred_fake = netD(output)
+
+                    loss_G = torch.mean(pred_fake)
+                    loss_G.backward()
+                    optimG.step()
+                    
+
+                    # get losses
+                    loss_G_train += [loss_G.item()]
+                    loss_D_real_train += [loss_D_real.item()]
+                    loss_D_fake_train += [loss_D_fake.item()]
+
+                    print('TRAIN: EPOCH %d: BATCH %04d/%04d: '
+                        'GEN GAN: %.4f DISC FAKE: %.4f DISC REAL: %.4f' %
+                        (epoch, i, num_batch_train,
+                        mean(loss_G_train), mean(loss_D_fake_train), mean(loss_D_real_train)))
+
+                
+                ## save
+                if (epoch % fine_tune_num_freq_save) == 0:
+                    self.save(dir_chck, netG, netD, optimG, optimD, epoch)
 
     def test(self):
         mode = self.mode
@@ -390,12 +514,21 @@ class Train:
 
         condition_dim = 9
         ## setup network
-        netG = ConditionalUNetGAN()
+        # netG = ConditionConvGenerator()
+        netG = ConditionEmbeddingFrozenGAN(nch_in=nch_in)
         # netG = DCGAN(nch_in+condition_dim, nch_out, nch_ker, norm)
         init_net(netG, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
 
         ## load from checkpoints
         st_epoch = 0
+        if self.fine_tune:
+            new_sequence = nn.Sequential(
+                nn.Linear(in_features=(nch_in+condition_dim), out_features=128),
+                nn.ReLU(0.2),
+                nn.Dropout(0.1)
+            )
+            netG.fc1 = new_sequence
+            netG = netG.to(device)
 
         ckpt = os.listdir(dir_chck)
         ckpt.sort()
@@ -413,10 +546,12 @@ class Train:
                 gender = gender_processing(input_gender, device=device)
                 age = age_processing(input_age)
                 condition = condition_processing(gender, age, device=device)
-                # input = torch.cat([input, condition], dim=1)
+                input = torch.cat([input, condition], dim=1)
                 # input = input.unsqueeze(2).unsqueeze(2)
 
-                output = netG(input, condition)
+                # output = netG(input, condition)
+                output = netG(input)
+
                 min_ = output.min()
                 max_ = output.max()
                 clipping = ((output-min_)/(max_-min_))
@@ -432,7 +567,7 @@ class Train:
         folder_path = os.path.join(path, self.start_time)
         if not os.path.exists(folder_path):
             os.mkdir(folder_path)
-        img.save(os.path.join(folder_path, f'{num}.jpg'), "JPEG")
+        img.save(os.path.join(folder_path, f'{num}.jpeg'), "JPEG")
 
 def gender_processing(input_gender: int, device='cpu') -> torch.Tensor:
     gender = 0
@@ -444,7 +579,9 @@ def gender_processing(input_gender: int, device='cpu') -> torch.Tensor:
     gender_tensor[0] = torch.tensor(gender)
     return gender_tensor
 
-def age_processing(input_age: int):
+def age_processing(input_age):
+    if type(input_age) == str:
+        input_age = int(input_age)
     age_boundary = [3, 7, 14, 23, 36, 46, 58, 121]
     for i in range(len(age_boundary)):
         if input_age < age_boundary[i]:

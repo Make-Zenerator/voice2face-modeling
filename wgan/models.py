@@ -301,8 +301,8 @@ class ConditionMLPGAN(nn.Module):
         # self.dsc4 = CNR2d(4 * self.nch_ker, 8 * self.nch_ker, kernel_size=4, stride=1, padding=1, norm=[], relu=0.2)
         # self.dsc5 = CNR2d(8 * self.nch_ker, 1,                kernel_size=4, stride=1, padding=1, norm=[], relu=[], bias=False)
 
-    def forward(self, x):
-        batch_size = x.size(0)
+    def forward(self, img, labels):
+        x = torch.cat((img, labels), -1)
         x = self.fc1(x)
         x = self.fc2(x)
         x = self.fc3(x)
@@ -312,57 +312,36 @@ class ConditionMLPGAN(nn.Module):
 
         x = torch.tanh(x)
 
-        x = x.reshape(batch_size, 3, 64, 64)
+        x = x.reshape(-1, 3, 64, 64)
 
         return x
 
 
 class ConditionConvGenerator(nn.Module):
-    def __init__(self, nch_in, nch_out=3, nch_ker=64, norm='bnorm'):
-        super(ConditionMLPGAN, self).__init__()
+    def __init__(self, nch_in=100, condition_dim=9, nch_out=3, nch_ker=64, norm='bnorm'):
+        super(ConditionConvGenerator, self).__init__()
 
         self.nch_in = nch_in
         self.nch_ker = nch_ker
+        self.nch_out = nch_out
         self.norm = norm
+        self.condition_dim = condition_dim
 
-        self.fc1 = nn.Sequential(
-            nn.Linear(1 * self.nch_in,  2 * self.nch_ker),
-            nn.ReLU(0.2),
-            nn.Dropout(0.1)
-        )
-        self.fc2 = nn.Sequential(
-            nn.Linear(2 * self.nch_ker,  4 * self.nch_ker),
-            nn.ReLU(0.2),
-            nn.Dropout(0.1)
-        )
-        self.fc3 = nn.Sequential(
-            nn.Linear(4 * self.nch_ker,  16 * self.nch_ker),
-            nn.ReLU(0.2),
-            nn.Dropout(0.1)
-        )
-        self.fc4 = nn.Sequential(
-            nn.Linear(16 * self.nch_ker,  32 * self.nch_ker),
-            nn.ReLU(0.2),
-            nn.Dropout(0.1)
-        )
-        self.fc5 = nn.Sequential(
-            nn.Linear(32 * self.nch_ker,  self.nch_ker * self.nch_ker),
-            nn.ReLU(0.2),
-        )
-        self.fc6 = nn.Linear(self.nch_ker * self.nch_ker,  3 * self.nch_ker * self.nch_ker)
+        self.dec1 = DECNR2d(self.nch_in+self.condition_dim,  8 * self.nch_ker, kernel_size=4, stride=1, padding=0, norm=self.norm, relu=0.0, drop=[])
+        self.dec2 = DECNR2d(8 * self.nch_ker, 4 * self.nch_ker, kernel_size=4, stride=2, padding=1, norm=self.norm, relu=0.0, drop=[])
+        self.dec3 = DECNR2d(4 * self.nch_ker, 2 * self.nch_ker, kernel_size=4, stride=2, padding=1, norm=self.norm, relu=0.0, drop=[])
+        self.dec4 = DECNR2d(2 * self.nch_ker, 1 * self.nch_ker, kernel_size=4, stride=2, padding=1, norm=self.norm, relu=0.0, drop=[])
+        self.dec5 = Deconv2d(1 * self.nch_ker, 1 * self.nch_out,kernel_size=4, stride=2, padding=1, bias=False)
 
-    def forward(self, x):
-        batch_size = x.size(0)
-        x = self.fc1(x)
-        x = self.fc2(x)
-        x = self.fc3(x)
-        x = self.fc4(x)
-        x = self.fc5(x)
-        x = self.fc6(x)
+    def forward(self, img, labels):
+        x = torch.cat((img, labels), -1).unsqueeze(2).unsqueeze(2)
+        x = self.dec1(x)
+        x = self.dec2(x)
+        x = self.dec3(x)
+        x = self.dec4(x)
+        x = self.dec5(x)
 
-        x = torch.sigmoid(x)
-
-        x = x.reshape(batch_size, 3, 64, 64)
+        x = torch.tanh(x)
 
         return x
 
@@ -515,3 +494,53 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=[]):
         net = torch.nn.DataParallel(net, gpu_ids)  # multi-GPUs
     init_weights(net, init_type, init_gain=init_gain)
     return net
+
+
+## finetuning gan
+class ConditionEmbeddingFrozenGAN(nn.Module):
+    def __init__(self, nch_in, nch_out=3, nch_ker=64, norm='bnorm'):
+        super(ConditionEmbeddingFrozenGAN, self).__init__()
+
+        self.nch_in = nch_in
+        self.nch_ker = nch_ker
+        self.norm = norm
+
+        self.fc1 = nn.Sequential(
+            nn.Linear(1 * self.nch_in,  2 * self.nch_ker),
+            nn.ReLU(0.2),
+            nn.Dropout(0.1)
+        )
+        self.fc2 = nn.Sequential(
+            nn.Linear(2 * self.nch_ker,  4 * self.nch_ker),
+            nn.ReLU(0.2),
+            nn.Dropout(0.1)
+        )
+        self.fc3 = nn.Sequential(
+            nn.Linear(4 * self.nch_ker,  16 * self.nch_ker),
+            nn.ReLU(0.2),
+            nn.Dropout(0.1)
+        )
+        self.fc4 = nn.Sequential(
+            nn.Linear(16 * self.nch_ker,  32 * self.nch_ker),
+            nn.ReLU(0.2),
+            nn.Dropout(0.1)
+        )
+        self.fc5 = nn.Sequential(
+            nn.Linear(32 * self.nch_ker,  self.nch_ker * self.nch_ker),
+            nn.ReLU(0.2),
+        )
+        self.fc6 = nn.Linear(self.nch_ker * self.nch_ker,  3 * self.nch_ker * self.nch_ker)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = self.fc2(x)
+        x = self.fc3(x)
+        x = self.fc4(x)
+        x = self.fc5(x)
+        x = self.fc6(x)
+
+        x = torch.tanh(x)
+
+        x = x.reshape(-1, 3, 64, 64)
+
+        return x

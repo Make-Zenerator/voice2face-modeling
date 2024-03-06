@@ -69,6 +69,10 @@ parser.add_argument('--data_type', default='float32', dest='data_type')
 parser.add_argument('--input_gender', default='m', choices=['m', 'man', 'male', 'f', 'female', 'woman'], dest='input_gender')
 parser.add_argument('--input_age', type=int, default=25, dest='input_age')
 
+parser.add_argument('--fine_tune', type=bool, default=False, dest='fine_tune')
+parser.add_argument('--fine_tune_num_epoch', type=int, default=100, dest='fine_tune_num_epoch')
+parser.add_argument('--fine_tune_num_freq_save', type=int, default=1, dest='fine_tune_num_freq_save')
+
 PARSER = Parser(parser)
 
 def main():

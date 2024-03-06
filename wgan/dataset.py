@@ -13,7 +13,7 @@ import zipfile
 
 DATA_PATH = "/workspace/VoxCeleb/vox1"
 FILE_NAME = "vox1_age_meta.csv"
-CELEBA_PATH = 'data/celeba'
+CELEBA_PATH = 'data/50k'
 FILE_PATH = os.path.join(DATA_PATH, FILE_NAME)
 
 class HQVoxceleb(Dataset):
@@ -56,31 +56,9 @@ class CelebADataset(Dataset):
       root_dir (string): Directory with all the images
       transform (callable, optional): transform to be applied to each image sample
     """
-    # Read names of images in the root directory
-    # Root directory for the dataset
-    data_root = 'data/celeba'
-    # Path to folder with the dataset
-    dataset_folder = f'{data_root}/img_align_celeba'
-    # URL for the CelebA dataset
-    url = 'https://drive.google.com/uc?id=1cNIac61PSA_LqDFYFUeyaQYekYPc75NH'
-    # Path to download the dataset to
-    download_path = f'{data_root}/img_align_celeba.zip'
-
-    # Create required directories 
-    if not os.path.exists(data_root):
-        os.makedirs(data_root)
-        os.makedirs(dataset_folder)
-
-        # Download the dataset from google drive
-        gdown.download(url, download_path, quiet=False)
-
-        # Unzip the downloaded file 
-        with zipfile.ZipFile(download_path, 'r') as ziphandler:
-            ziphandler.extractall(dataset_folder)
-            
-    image_names = os.listdir(root_dir)
-
     self.root_dir = root_dir
+    
+    image_names = os.listdir(self.root_dir)
     self.transform = transform 
     self.image_names = natsorted(image_names)
 
@@ -97,3 +75,9 @@ class CelebADataset(Dataset):
       img = self.transform(img)
 
     return img
+
+  # def split_dataset(self) -> Tuple[Subset, Subset]:
+  #       n_val = int(len(self) * 0.2)
+  #       n_train = len(self) - n_val
+  #       train_set, val_set = random_split(self, [n_train, n_val])
+  #       return train_set, val_set
