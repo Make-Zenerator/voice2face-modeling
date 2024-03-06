@@ -63,6 +63,7 @@ parser.add_argument('--freeze_discriminators', default=False)
 parser.add_argument('--input_wav_dir', type=str, default='data/example_audio')
 parser.add_argument('--fuser_infer', default=False)
 parser.add_argument('--seed', type=int, default=311)
+parser.add_argument('--input_wav_file', type=str, default='data/example_audio/exp.wav')
 args = parser.parse_args()
 
 options = {

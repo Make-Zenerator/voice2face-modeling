@@ -55,13 +55,15 @@ def main():
             checkpoint_start_from=args.checkpoint_start_from)
     model.cuda().eval()
     
-    voice_path = os.path.join(args.input_wav_dir, '*.wav')
-    voice_list = glob.glob(voice_path)
-    filename = voice_list[0]
+    # voice_path = os.path.join(args.input_wav_dir, '*.wav')
+    # voice_list = glob.glob(voice_path)
+    # filename = voice_list[0]
+    filename = os.path.join(args.input_wav_file)
+    assert os.path.exists(filename), "File not found: {}".format(filename)
 
     # for filename in voice_list:
-    result_sub_dir = filename.replace('.wav', '')
-    os.makedirs(result_sub_dir, exist_ok=True)
+    # result_sub_dir = filename.replace('.wav', '')
+    # os.makedirs(result_sub_dir, exist_ok=True) # 결과 폴더 생성
     # Load mel_spectrogram
     log_mel = wav_to_mel(filename)
     log_mel = mel_transform(log_mel).type(float_dtype)
@@ -81,8 +83,10 @@ def main():
         imgs_fused, normalize_method=image_normalize_method)
     for j in range(imgs_fused.shape[0]):
         img_np = imgs_fused[j].numpy().transpose(1, 2, 0) # 64x64x3
+        # img_path = os.path.join(result_sub_dir, 'fused_%d.png' % j) # 이미지 저장할 파일
+        # imwrite(img_path, img_np) # 이미지 저장
 
-    return img_np
+    return img_np.tobytes()
 
 if __name__ == '__main__':
     main()
