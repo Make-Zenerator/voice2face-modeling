@@ -1,4 +1,15 @@
-from models import DCGAN, Discriminator, init_net, ConditionMLPGAN, ConditionEmbeddingGAN, ConditioEmbeddingDiscriminator, UNet, ConditionalUNetGAN, ConditionConvGenerator, ConditionEmbeddingFrozenGAN
+from models import (DCGAN,
+                    Discriminator,
+                    init_net,
+                    ConditionMLPGAN,
+                    ConditionEmbeddingGAN,
+                    ConditioEmbeddingDiscriminator,
+                    UNet,
+                    ConditionalUNetGAN,
+                    ConditionConvGenerator,
+                    ConditionEmbeddingFrozenGAN,
+                    ConditionLinearFinetuneGAN
+                    )
 from dataset import HQVoxceleb, CelebADataset
 import torchvision.datasets as datasets
 from layer import GradientPaneltyLoss
@@ -180,9 +191,10 @@ class Train:
         # netG = DCGAN(nch_in+condition_dim, nch_out, nch_ker, norm)
         # netG = ConditionMLPGAN(nch_in=(nch_in+condition_dim))
         # netG = ConditionConvGenerator()
-        netG = ConditionEmbeddingFrozenGAN(nch_in=nch_in)
+        # netG = ConditionEmbeddingFrozenGAN(nch_in=nch_in)
         # netG = ConditionEmbeddingGAN(nch_in=nch_in, condition_dim=9, nch_ker=64)
         # netG = ConditionalUNetGAN(noise_dim=100, nch_in=3, condition_dim=9, nch_out=3)
+        netG = ConditionLinearFinetuneGAN(nch_in=nch_in)
         netD = Discriminator(nch_out, nch_ker, [])
         # netD = ConditioEmbeddingDiscriminator(input_size=(self.nch_out,self.nx_out,self.ny_out), nch_ker=64, condition_dim=9)
 
@@ -306,7 +318,7 @@ class Train:
             dataset = HQVoxceleb(transform=transform)
             loader_train = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=8, drop_last=True, collate_fn=self.custom_collate_fn)
 
-            netG = ConditionEmbeddingFrozenGAN(nch_in=nch_in)
+            netG = ConditionLinearFinetuneGAN(nch_in=nch_in)
             netD = Discriminator(nch_out, nch_ker, [])
             init_net(netG, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
             init_net(netD, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
@@ -320,17 +332,19 @@ class Train:
             optimG = torch.optim.Adam(paramsG, lr=1e-5, betas=(self.beta1, 0.999))
             optimD = torch.optim.Adam(paramsD, lr=1e-5, betas=(self.beta1, 0.999))
 
+            dir_chck = os.path.join(dir_chck, self.start_time)
             ckpt = os.listdir(dir_chck)
             ckpt.sort()
             file_path = os.path.join(dir_chck, ckpt[-1])
             netG, netD, optimG, optimD, st_epoch = self.load(file_path, netG, netD, optimG, optimD, mode=mode)
             new_sequence = nn.Sequential(
-                nn.Linear(in_features=(nch_in+condition_dim), out_features=128),
-                nn.ReLU(0.2),
+                nn.Linear(in_features=(nch_in+nch_ker//4+nch_ker//4), out_features=2*nch_ker),
+                nn.LeakyReLU(0.2),
                 nn.Dropout(0.1)
             )
             netG.fc1 = new_sequence
             netG = netG.to(device)
+            netG.set_fine_tune(True)
             dir_chck = os.path.join(dir_chck, "fine_tuning")
             for epoch in range(fine_tune_num_epoch + 1):
                 ## training phase
@@ -349,13 +363,13 @@ class Train:
                     images = images.to(device)
                     batch_size = images.size(0)
                     age_labels = age_labels.unsqueeze(1)
-                    age_condition = torch.zeros(batch_size, 8)
-                    age_condition.scatter_(1, age_labels, 1)
-                    gender_labels = gender_labels.unsqueeze(1)
-                    condition = torch.cat([gender_labels, age_condition], dim=1).to(device) 
+                    age_conditions = torch.zeros(batch_size, 8)
+                    age_conditions.scatter_(1, age_labels, 1)
+                    gender_conditions = gender_labels.unsqueeze(1)
+                    # conditions = torch.cat([gender_conditions, age_conditions], dim=1).to(device) 
                     input = torch.randn(batch_size, nch_in).to(device)
-                    input = torch.cat([input, condition], dim=1)
-                    output = netG(input)
+                    # input = torch.cat([input, conditions], dim=1)
+                    output = netG((input, gender_conditions, age_conditions))
 
                     # backward netD
                     set_requires_grad(netD, True)
@@ -575,8 +589,8 @@ def gender_processing(input_gender: int, device='cpu') -> torch.Tensor:
         gender = 0
     elif input_gender in ['f', 'female', 'woman']:
         gender = 1
-    gender_tensor = torch.zeros((1,1)).to(device)
-    gender_tensor[0] = torch.tensor(gender)
+    gender_tensor = torch.zeros((1,2)).to(device)
+    gender_tensor[gender] = torch.tensor(1)
     return gender_tensor
 
 def age_processing(input_age):

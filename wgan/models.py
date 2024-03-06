@@ -544,3 +544,79 @@ class ConditionEmbeddingFrozenGAN(nn.Module):
         x = x.reshape(-1, 3, 64, 64)
 
         return x
+
+
+## finetuning gan
+class ConditionLinearFinetuneGAN(nn.Module):
+    def __init__(self, nch_in, nch_out=3, nch_ker=64, norm='bnorm', fine_tune=False):
+        super(ConditionLinearFinetuneGAN, self).__init__()
+
+        self.nch_in = nch_in
+        self.nch_ker = nch_ker
+        self.norm = norm
+        self.fine_tune = fine_tune
+
+        self.gender_layer = nn.Sequential(
+            nn.Linear(2, self.nch_ker),
+            nn.LeakyReLU(0.2),
+            nn.Linear(self.nch_ker, self.nch_ker),
+            nn.LeakyReLU(0.2),
+            nn.Linear(self.nch_ker, self.nch_ker//4),
+            nn.LeakyReLU(0.2)
+        )
+        self.age_layer = nn.Sequential(
+            nn.Linear(8, self.nch_ker),
+            nn.LeakyReLU(0.2),
+            nn.Linear(self.nch_ker, self.nch_ker),
+            nn.LeakyReLU(0.2),
+            nn.Linear(self.nch_ker, self.nch_ker//4),
+            nn.LeakyReLU(0.2)
+        )
+
+        self.fc1 = nn.Sequential(
+            nn.Linear(1 * self.nch_in,  2 * self.nch_ker),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.1)
+        )
+        self.fc2 = nn.Sequential(
+            nn.Linear(2 * self.nch_ker,  4 * self.nch_ker),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.1)
+        )
+        self.fc3 = nn.Sequential(
+            nn.Linear(4 * self.nch_ker,  16 * self.nch_ker),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.1)
+        )
+        self.fc4 = nn.Sequential(
+            nn.Linear(16 * self.nch_ker,  32 * self.nch_ker),
+            nn.LeakyReLU(0.2),
+            nn.Dropout(0.1)
+        )
+        self.fc5 = nn.Sequential(
+            nn.Linear(32 * self.nch_ker,  self.nch_ker * self.nch_ker),
+            nn.LeakyReLU(0.2),
+        )
+        self.fc6 = nn.Linear(self.nch_ker * self.nch_ker,  3 * self.nch_ker * self.nch_ker)
+
+    def forward(self, x):
+        if self.fine_tune:
+            noize, gender, age = x
+            gender = self.gender_layer(gender)
+            age = self.age_layer(age)
+            x = torch.concat((noize,gender,age), -1)
+        x = self.fc1(x) # fine_tune : [batch_size, 132]
+        x = self.fc2(x)
+        x = self.fc3(x)
+        x = self.fc4(x)
+        x = self.fc5(x)
+        x = self.fc6(x)
+
+        x = torch.tanh(x)
+
+        x = x.reshape(-1, 3, 64, 64)
+
+        return x
+
+    def set_fine_tune(self, fine_tune):
+        self.fine_tune = fine_tune
