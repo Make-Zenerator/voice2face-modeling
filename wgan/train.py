@@ -335,10 +335,10 @@ class Train:
             optimG = torch.optim.Adam(paramsG, lr=1e-5, betas=(self.beta1, 0.999))
             optimD = torch.optim.Adam(paramsD, lr=1e-5, betas=(self.beta1, 0.999))
 
-            dir_chck = os.path.join(dir_chck, self.start_time)
+            # dir_chck = os.path.join(dir_chck, self.start_time)
             ckpt = os.listdir(dir_chck)
             ckpt.sort()
-            file_path = os.path.join(dir_chck, ckpt[0])
+            file_path = os.path.join(dir_chck, ckpt[-3])
             netG, netD, optimG, optimD, st_epoch = self.load(file_path, netG, netD, optimG, optimD, mode=mode)
 
             new_sequence = nn.Sequential(
@@ -388,18 +388,18 @@ class Train:
                     input_G = (input, gender_conditions, age_conditions)
                     input_D = (images, gender_conditions, age_conditions)
                     output = netG(input_G)
-                    output_D = (output, gender_conditions, age_conditions)
+                    output_D = (output.detach(), gender_conditions, age_conditions)
                     
                     # backward netD
                     set_requires_grad(netD, True)
                     optimD.zero_grad()
 
                     pred_real = netD(input_D)
-                    pred_fake = netD(output_D.detach())
+                    pred_fake = netD(output_D)
 
                     alpha = torch.rand(batch_size, 1, 1, 1).to(self.device)
                     output_ = (alpha * images + (1 - alpha) * output.detach()).requires_grad_(True)
-                    src_out_ = netD(output_)
+                    src_out_ = netD((output_, gender_conditions, age_conditions))
 
                     # BCE Loss
                     # loss_D_real = fn_GAN(pred_real, torch.ones_like(pred_real))
@@ -424,7 +424,7 @@ class Train:
                     optimG.zero_grad()
                     
                     # pred_fake = netD(output, condition)
-                    pred_fake = netD(output_D)
+                    pred_fake = netD((output, gender_conditions, age_conditions))
 
                     loss_G = torch.mean(pred_fake)
                     loss_G.backward()
@@ -567,18 +567,55 @@ class Train:
         ckpt = os.listdir(dir_chck)
         ckpt.sort()
 
-        for i in range(len(ckpt)):
-            ## test phase
-            model_path = os.path.join(dir_chck, ckpt[i])
-            netG = self.load(model_path, netG, mode=mode)
-            with torch.no_grad():
+        # for i in range(len(ckpt)):
+        #     ## test phase
+        #     model_path = os.path.join(dir_chck, ckpt[i])
+        #     netG = self.load(model_path, netG, mode=mode)
+        #     with torch.no_grad():
 
-                netG.eval()
+        #         netG.eval()
+
+        #         # input = torch.randn(1, nch_in).to(device)
+        #         noise = torch.randn(1, nch_in, device=device)
+        #         gender = gender_processing(input_gender, device=device)
+        #         age = age_processing(input_age)
+        #         age_conditions = torch.zeros(1, 8)
+        #         age_conditions[0][age] = torch.Tensor(1)
+        #         age_conditions = age_conditions.to(device)
+        #         # age_conditions = age_conditions.scatter_(1, age, 1).to(device)
+        #         # condition = condition_processing(gender, age, device=device)
+        #         # input = torch.cat([input, condition], dim=1)
+        #         # input = input.unsqueeze(2).unsqueeze(2)
+
+        #         # output = netG(input, condition)
+        #         output = netG((noise, gender, age_conditions))
+
+        #         min_ = output.min()
+        #         max_ = output.max()
+        #         clipping = ((output-min_)/(max_-min_))
+
+        #         output_path = "results/wgan-gp/condition_linear_finetune_gan_general_discriminator"
+
+        #         self.save_image(clipping, output_path, i)
+
+        import random
+        data_list = random.sample(range(4, 15), 10)
+        gender = ['m','f']
+        gender_list = [random.choice(gender) for i in range(50)]
+        age_list = [random.choice(data_list) for i in range(50)]
+
+        model_path = os.path.join(dir_chck, ckpt[-1])
+        netG = self.load(model_path, netG, mode=mode)
+        with torch.no_grad():
+
+            netG.eval()
+            for i in range(len(gender_list)):
+            ## test phase
 
                 # input = torch.randn(1, nch_in).to(device)
                 noise = torch.randn(1, nch_in, device=device)
-                gender = gender_processing(input_gender, device=device)
-                age = age_processing(input_age)
+                gender = gender_processing(gender_list[i], device=device)
+                age = age_processing(age_list[i])
                 age_conditions = torch.zeros(1, 8)
                 age_conditions[0][age] = torch.Tensor(1)
                 age_conditions = age_conditions.to(device)
@@ -594,7 +631,7 @@ class Train:
                 max_ = output.max()
                 clipping = ((output-min_)/(max_-min_))
 
-                output_path = "results/wgan-gp/images"
+                output_path = "results/wgan-gp/condition_linear_finetune_gan_general_discriminator"
 
                 self.save_image(clipping, output_path, i)
     
@@ -657,7 +694,7 @@ def get_scheduler(optimizer, opt):
 
     Parameters:
         optimizer          -- the optimizer of the network
-        opt (option class) -- stores all the experiment flags; needs to be a subclass of BaseOptions．　
+        opt (option class) -- stores all the experiment flags; needs to be a subclass of BaseOptions.
                               opt.lr_policy is the name of learning rate policy: linear | step | plateau | cosine
 
     For 'linear', we keep the same learning rate for the first <opt.n_epochs> epochs
