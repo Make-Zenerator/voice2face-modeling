@@ -40,7 +40,7 @@ def video_swap(video_path, id_vetor, swap_model, detect_model, save_path, temp_r
         video_audio_clip = AudioFileClip(video_path)
 
     video = cv2.VideoCapture(video_path)
-    logoclass = watermark_image('./simswaplogo/simswaplogo.png')
+    logoclass = watermark_image('./SimSwap/simswaplogo/simswaplogo.png')
     ret = True
     frame_index = 0
 
@@ -59,7 +59,7 @@ def video_swap(video_path, id_vetor, swap_model, detect_model, save_path, temp_r
         n_classes = 19
         net = BiSeNet(n_classes=n_classes)
         net.cuda()
-        save_pth = os.path.join('./parsing_model/checkpoint', '79999_iter.pth')
+        save_pth = os.path.join('./SimSwap/parsing_model/checkpoint', '79999_iter.pth')
         net.load_state_dict(torch.load(save_pth))
         net.eval()
     else:
@@ -74,7 +74,7 @@ def video_swap(video_path, id_vetor, swap_model, detect_model, save_path, temp_r
             if detect_results is not None:
                 # print(frame_index)
                 if not os.path.exists(temp_results_dir):
-                        os.mkdir(temp_results_dir)
+                        os.makedirs(temp_results_dir)
                 frame_align_crop_list = detect_results[0]
                 frame_mat_list = detect_results[1]
                 swap_result_list = []

@@ -13,7 +13,7 @@ import torch
 import shutil
 import numpy as np
 from tqdm import tqdm
-from util.reverse2original import reverse2wholeimage
+from util.reverse2original_gif import reverse2wholeimage_gif
 import moviepy.editor as mp
 from moviepy.editor import AudioFileClip, VideoFileClip 
 from moviepy.video.io.ImageSequenceClip import ImageSequenceClip
@@ -95,7 +95,7 @@ def gif_swap(video_path, id_vetor, swap_model, detect_model, save_path, temp_res
                     frame_align_crop_tenor_list.append(frame_align_crop_tenor)
 
 
-                img = reverse2wholeimage(frame_align_crop_tenor_list,swap_result_list, frame_mat_list, crop_size, frame, logoclass,\
+                img = reverse2wholeimage_gif(frame_align_crop_tenor_list,swap_result_list, frame_mat_list, crop_size, frame, logoclass,\
                         os.path.join(temp_results_dir, 'frame_{:0>7d}.jpg'.format(frame_index)), no_simswaplogo, pasring_model=net, use_mask=use_mask, norm=spNorm)
                 frames.append(img.tobytes())
 
