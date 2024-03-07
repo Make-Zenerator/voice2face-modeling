@@ -632,19 +632,19 @@ class ConditionLinearFinetuneDiscriminator(nn.Module):
         self.fine_tune = fine_tune
 
         self.gender_layer = nn.Sequential(
-            nn.Linear(2, 4*self.nch_ker*self.nck_ker),
+            nn.Linear(2, 4*self.nch_ker*self.nch_ker),
             nn.LeakyReLU(0.2),
-            nn.Linear(4*self.nch_ker*self.nck_ker, 4*self.nch_ker*self.nck_ker),
+            nn.Linear(4*self.nch_ker*self.nch_ker, 4*self.nch_ker*self.nch_ker),
             nn.LeakyReLU(0.2),
-            nn.Linear(4*self.nch_ker*self.nck_ker, self.nch_ker*self.nck_ker),
+            nn.Linear(4*self.nch_ker*self.nch_ker, self.nch_ker*self.nch_ker),
             nn.LeakyReLU(0.2)
         )
         self.age_layer = nn.Sequential(
-            nn.Linear(8, 4*self.nch_ker*self.nck_ker),
+            nn.Linear(8, 4*self.nch_ker*self.nch_ker),
             nn.LeakyReLU(0.2),
-            nn.Linear(4*self.nch_ker*self.nck_ker, 4*self.nch_ker*self.nck_ker),
+            nn.Linear(4*self.nch_ker*self.nch_ker, 4*self.nch_ker*self.nch_ker),
             nn.LeakyReLU(0.2),
-            nn.Linear(4*self.nch_ker*self.nck_ker, self.nch_ker*self.nck_ker),
+            nn.Linear(4*self.nch_ker*self.nch_ker, self.nch_ker*self.nch_ker),
             nn.LeakyReLU(0.2)
         )
 
@@ -652,7 +652,10 @@ class ConditionLinearFinetuneDiscriminator(nn.Module):
         self.dsc2 = CNR2d(1 * self.nch_ker, 2 * self.nch_ker, kernel_size=4, stride=2, padding=1, norm=self.norm, relu=0.2)
         self.dsc3 = CNR2d(2 * self.nch_ker, 4 * self.nch_ker, kernel_size=4, stride=2, padding=1, norm=self.norm, relu=0.2)
         self.dsc4 = CNR2d(4 * self.nch_ker, 8 * self.nch_ker, kernel_size=4, stride=2, padding=1, norm=self.norm, relu=0.2)
-        self.dsc5 = CNR2d(8 * self.nch_ker, 1,                kernel_size=4, stride=1, padding=1, norm=[],        relu=[], bias=False)
+        self.dsc5 = CNR2d(8 * self.nch_ker, 16 * self.nch_ker, kernel_size=4, stride=2, padding=1, norm=self.norm, relu=0.2)
+        self.dsc6 = CNR2d(16 * self.nch_ker, 1,                kernel_size=4, stride=1, padding=1, norm=[],        relu=[], bias=False)
+
+        self.global_avg_pool = nn.AdaptiveAvgPool2d(1)
 
     def forward(self, x):
         if self.fine_tune:
@@ -667,10 +670,11 @@ class ConditionLinearFinetuneDiscriminator(nn.Module):
         x = self.dsc3(x)
         x = self.dsc4(x)
         x = self.dsc5(x)
-
+        x = self.dsc6(x)
+        x = self.global_avg_pool(x)
         x = torch.sigmoid(x)
 
-        x = x.reshape(-1, 3, 64, 64)
+        # x = x.reshape(-1, 3, 64, 64)
 
         return x
 

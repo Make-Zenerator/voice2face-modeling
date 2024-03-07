@@ -335,7 +335,7 @@ class Train:
             optimG = torch.optim.Adam(paramsG, lr=1e-5, betas=(self.beta1, 0.999))
             optimD = torch.optim.Adam(paramsD, lr=1e-5, betas=(self.beta1, 0.999))
 
-            dir_chck = os.path.join(dir_chck, "20240306_142136")
+            dir_chck = os.path.join(dir_chck, self.start_time)
             ckpt = os.listdir(dir_chck)
             ckpt.sort()
             file_path = os.path.join(dir_chck, ckpt[0])
@@ -385,14 +385,17 @@ class Train:
                     # conditions = torch.cat([gender_conditions, age_conditions], dim=1).to(device) 
                     input = torch.randn(batch_size, nch_in).to(device)
                     # input = torch.cat([input, conditions], dim=1)
-                    output = netG((input, gender_conditions, age_conditions))
-
+                    input_G = (input, gender_conditions, age_conditions)
+                    input_D = (images, gender_conditions, age_conditions)
+                    output = netG(input_G)
+                    output_D = (output, gender_conditions, age_conditions)
+                    
                     # backward netD
                     set_requires_grad(netD, True)
                     optimD.zero_grad()
 
-                    pred_real = netD(images)
-                    pred_fake = netD(output.detach())
+                    pred_real = netD(input_D)
+                    pred_fake = netD(output_D.detach())
 
                     alpha = torch.rand(batch_size, 1, 1, 1).to(self.device)
                     output_ = (alpha * images + (1 - alpha) * output.detach()).requires_grad_(True)
@@ -421,7 +424,7 @@ class Train:
                     optimG.zero_grad()
                     
                     # pred_fake = netD(output, condition)
-                    pred_fake = netD(output)
+                    pred_fake = netD(output_D)
 
                     loss_G = torch.mean(pred_fake)
                     loss_G.backward()
@@ -490,15 +493,15 @@ class Train:
             netG.eval()
             # netG.train()
 
-            input = torch.randn(batch_size, nch_in).to(device)
+            # input = torch.randn(batch_size, nch_in).to(device)
             noise = torch.randn(1, nch_in, device=device)
             gender = gender_processing(input_gender, device=device)
-            age = age_processing(input_age)
-            condition = condition_processing(gender, age, device=device)
-            input = torch.cat([input, condition], dim=1)
-            input = input.unsqueeze(2).unsqueeze(2)
+            age = age_processing(input_age, device=device)
+            # condition = condition_processing(gender, age, device=device)
+            # input = torch.cat([input, condition], dim=1)
+            # input = input.unsqueeze(2).unsqueeze(2)
 
-            output = netG(input)
+            output = netG((noise, gender, age))
 
             output = transform(output)
 
@@ -549,12 +552,12 @@ class Train:
         netG = ConditionLinearFinetuneGAN(nch_in=nch_in)
         # netG = DCGAN(nch_in+condition_dim, nch_out, nch_ker, norm)
         init_net(netG, init_type='normal', init_gain=0.02, gpu_ids=gpu_ids)
-
+        netG.set_fine_tune(self.fine_tune)
         ## load from checkpoints
         st_epoch = 0
         if self.fine_tune:
             new_sequence = nn.Sequential(
-                nn.Linear(in_features=(nch_in+condition_dim), out_features=128),
+                nn.Linear(in_features=(nch_in+nch_ker//4+nch_ker//4), out_features=128),
                 nn.ReLU(0.2),
                 nn.Dropout(0.1)
             )
@@ -572,16 +575,20 @@ class Train:
 
                 netG.eval()
 
-                input = torch.randn(1, nch_in).to(device)
+                # input = torch.randn(1, nch_in).to(device)
                 noise = torch.randn(1, nch_in, device=device)
                 gender = gender_processing(input_gender, device=device)
                 age = age_processing(input_age)
-                condition = condition_processing(gender, age, device=device)
-                input = torch.cat([input, condition], dim=1)
+                age_conditions = torch.zeros(1, 8)
+                age_conditions[0][age] = torch.Tensor(1)
+                age_conditions = age_conditions.to(device)
+                # age_conditions = age_conditions.scatter_(1, age, 1).to(device)
+                # condition = condition_processing(gender, age, device=device)
+                # input = torch.cat([input, condition], dim=1)
                 # input = input.unsqueeze(2).unsqueeze(2)
 
                 # output = netG(input, condition)
-                output = netG(input)
+                output = netG((noise, gender, age_conditions))
 
                 min_ = output.min()
                 max_ = output.max()
@@ -601,8 +608,7 @@ class Train:
         img.save(os.path.join(folder_path, f'{num}.jpeg'), "JPEG")
 
 def gender_processing(input_genders, device='cpu') -> torch.Tensor:
-    batch_size = input_genders.size(0)
-    gender_tensors = torch.zeros((batch_size, 2))
+    gender_tensors = torch.zeros((1, 2))
     for i, input_gender in enumerate(input_genders):
         gender = 0
         if input_gender in ['m', 'male', 'man'] or input_gender == 0 :
@@ -610,7 +616,7 @@ def gender_processing(input_genders, device='cpu') -> torch.Tensor:
         elif input_gender in ['f', 'female', 'woman'] or input_gender == 1:
             gender = 1
         gender_tensors[i][gender] = torch.tensor(1)
-    return gender_tensors
+    return gender_tensors.to(device)
 
 def age_processing(input_age):
     if type(input_age) == str:
