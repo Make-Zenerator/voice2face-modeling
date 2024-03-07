@@ -60,6 +60,7 @@ if __name__ == '__main__':
     folder_path = opt.pic_a_path
     file_list = os.listdir(folder_path)
     output_path = 'results/for_sim_swap'
+    k=0
     with torch.no_grad():
         # pic_a = opt.pic_a_path
         # img_a = Image.open(pic_a).convert('RGB')
@@ -74,9 +75,10 @@ if __name__ == '__main__':
                     img_a_align_crop, _ = app.get(img_a_whole,crop_size)
                     cv2.imwrite(f'{output_path}/{i}_{j}.jpg', img_a_whole)
                     print(f"Save {image}")
+                    k+=1
                 except:
                     continue
-            print(f"Done {file}")
+            print(f"Done {file}... and k={k}")
         #     img_a_align_crop_pil = Image.fromarray(cv2.cvtColor(img_a_align_crop[0],cv2.COLOR_BGR2RGB)) 
         #     img_a = transformer_Arcface(img_a_align_crop_pil)
         #     img_id = img_a.view(-1, img_a.shape[0], img_a.shape[1], img_a.shape[2])
