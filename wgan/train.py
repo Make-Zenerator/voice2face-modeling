@@ -599,12 +599,12 @@ class Train:
         #         self.save_image(clipping, output_path, i)
 
         import random
-        data_list = random.sample(range(4, 15), 10)
-        gender = ['m','f']
-        gender_list = [random.choice(gender) for i in range(50)]
-        age_list = [random.choice(data_list) for i in range(50)]
+        data_list = random.sample(range(12, 50), 30)
+        gender = ['m']
+        gender_list = [random.choice(gender) for i in range(200)]
+        age_list = [random.choice(data_list) for i in range(200)]
 
-        model_path = os.path.join(dir_chck, ckpt[-1])
+        model_path = os.path.join(dir_chck, ckpt[0])
         netG = self.load(model_path, netG, mode=mode)
         with torch.no_grad():
 
