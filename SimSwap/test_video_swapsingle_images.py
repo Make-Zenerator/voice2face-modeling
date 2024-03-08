@@ -61,6 +61,7 @@ if __name__ == '__main__':
     with torch.no_grad():
         folder_path = opt.pic_a_path
         image_list = os.listdir(folder_path)
+        image_list = sorted(image_list)
         for image_path in image_list:
             print(f"Start processing {image_path}...")
             pic_a = os.path.join(folder_path, image_path)
