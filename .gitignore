@@ -164,12 +164,21 @@ data/
 *.npy
 *.ipynb
 *.pkl
+*.png
+*.jpg
+*.mp4
+*.zip
+*.onnx
+*.tar
+*.ipynb
 
 .vscode/
 output/
-requirements.txt
 wandb
 log
 results
 checkpoints
 nohup*
+SimSwap/arcface_model/
+SimSwap/checkpoints/
+SimSwap/parsing_model/checkpoint/
