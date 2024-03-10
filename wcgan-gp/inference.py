@@ -4,13 +4,12 @@ import torch.nn as nn
 from datetime import datetime
 
 from model import ConditionLinearFinetuneGAN, init_net
+from inference_options import InferenceOptions
 
 from utils import model_load, gender_processing, age_processing, save_image
 
 class Inference:
     def __init__(self, args):
-        self.train_continue = args.train_continue
-
         self.checkpoint_path = args.checkpoint_path
         self.checkpoint_name = args.checkpoint_name
         self.checkpoint_fine_tune_name = args.checkpoint_fine_tune_name
@@ -86,3 +85,10 @@ class Inference:
             save_image(clipping, output_path, self.start_time)
         
         return output_path
+    
+if __name__ == '__main__':
+    opt = InferenceOptions().parse()
+
+    INFERENCER = Inference(opt)
+    output_path = INFERENCER.inference()
+    print(output_path)

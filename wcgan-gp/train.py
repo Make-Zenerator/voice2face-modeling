@@ -11,6 +11,7 @@ from model import ConditionLinearFinetuneGAN, Discriminator, init_net, set_requi
 from dataset import HQVoxceleb, CelebADataset
 from utils import GradientPaneltyLoss, model_load, model_save, custom_collate_fn
 
+from train_options import TrainOptions
 
 class Train:
     def __init__(self, args):
@@ -381,3 +382,13 @@ class Train:
             ## save
             if (epoch % self.fine_tune_num_freq_save) == 0:
                 model_save(ckpt, netG, netD, optimG, optimD, epoch, start_time=self.start_time)
+                
+if __name__ == '__main__':
+    opt = TrainOptions().parse()
+
+    TRAINER = Train(opt)
+    
+    if opt.mode == 'train':
+        TRAINER.train()
+    elif opt.mode == 'finetune':
+        TRAINER.fine_tuning()

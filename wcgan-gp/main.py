@@ -55,14 +55,16 @@ def main():
     PARSER.write_args()
     PARSER.print_args()
 
-    TRAINER = Train(ARGS)
-
     if ARGS.mode == 'train':
+        
+        TRAINER = Train(ARGS)
         TRAINER.train()
     elif ARGS.mode == 'finetune':
+        TRAINER = Train(ARGS)
         TRAINER.fine_tuning()
     elif ARGS.mode == 'inference':
-        output_path = Inference.inference()
+        INFERENCER = Inference(ARGS)
+        output_path = INFERENCER.inference()
         return output_path
 
 if __name__ == '__main__':
