@@ -67,7 +67,11 @@ if __name__ == '__main__':
             pic_a = os.path.join(folder_path, image_path)
             # img_a = Image.open(pic_a).convert('RGB')
             img_a_whole = cv2.imread(pic_a)
-            img_a_align_crop, _ = app.get(img_a_whole,crop_size)
+            try:
+                img_a_align_crop, _ = app.get(img_a_whole,crop_size)
+            except:
+                print(f"Error: {image_path}")
+                continue
             img_a_align_crop_pil = Image.fromarray(cv2.cvtColor(img_a_align_crop[0],cv2.COLOR_BGR2RGB)) 
             img_a = transformer_Arcface(img_a_align_crop_pil)
             img_id = img_a.view(-1, img_a.shape[0], img_a.shape[1], img_a.shape[2])
