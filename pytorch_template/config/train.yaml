@@ -8,6 +8,7 @@ verbose: False
 val_size: 0.2
 
 # Data Loader
+dataset_name : SegDataset
 input_width: 480
 input_height: 256
 scaler: normalize
@@ -19,10 +20,10 @@ drop_last: False
 model:
   model_name: Unet
   args:
-    encoder: timm-efficientnet-b0 #timm-regnety_016
-    encoder_weight: noisy-student #imagenet
-    depth: 5
-    n_classes: 4
+    encoder_name: timm-efficientnet-b0 #timm-regnety_016
+    encoder_weights: noisy-student #imagenet
+    # depth: 5
+    classes: 4
     activation: null
 
 # Trainer
