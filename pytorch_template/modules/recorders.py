@@ -7,6 +7,8 @@ import logging
 import torch
 import csv
 import os
+import wandb
+import mlflow
 
 
 class Recorder():
@@ -42,6 +44,17 @@ class Recorder():
 
     def set_logger(self, logger: logging.RootLogger):
         self.logger = logger
+    
+    def wandb_mlflow_log(self, model, log_dict,sample_image=None):
+        mlflow.log_metrics(log_dict)
+        mlflow.pytorch.log_model(
+            pytorch_model=model,
+            artifact_path = "sf2f_pytorch",
+        )
+        if sample_image:
+            log_dict['sample'] = [wandb.Image(sample_image, caption=f"Sample")]
+        wandb.log(log_dict)
+
 
     def add_row(self, row_dict: dict):
         """Epoch 단위 성능 적재
@@ -109,4 +122,3 @@ class Recorder():
             self.logger.debug(f"RECORDER | plot saved: {os.path.join(self.plot_dir, plot_name +'.png')}")
 
 
-        

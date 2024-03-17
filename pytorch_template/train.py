@@ -5,9 +5,10 @@ from time import time
 import numpy as np
 import shutil, random, os, sys, torch
 from glob import glob
+import mlflow, wandb
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
-
+from config import secret
 prj_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(prj_dir)
 
@@ -24,7 +25,6 @@ from modules.trainer import Trainer
 from models.utils import get_model
 
 if __name__ == '__main__':
-    
     # Load config
     config_path = os.path.join(prj_dir, 'config', 'train.yaml')
     config = load_yaml(config_path)
@@ -32,6 +32,25 @@ if __name__ == '__main__':
     # Set train serial: ex) 20211004
     train_serial = datetime.now().strftime("%Y%m%d_%H%M%S")
     train_serial = 'debug' if config['debug'] else train_serial
+    
+    ##mlflow set
+    os.environ["MLFLOW_S3_ENDPOINT_URL"] = secret.MLFLOW_S3_ENDPOINT_URL
+    os.environ["MLFLOW_TRACKING_URI"] = secret.MLFLOW_TRACKING_URI
+    os.environ["AWS_ACCESS_KEY_ID"] = secret.AWS_ACCESS_KEY_ID
+    os.environ["AWS_SECRET_ACCESS_KEY"] = secret.AWS_SECRET_ACCESS_KEY
+    
+    ## wandb
+    mlflow.start_run()
+    mlflow.set_experiment(config['mlflow_exp_name'])
+    wandb.init(
+            project=config['project_name'],
+            config={
+                "architecture": config['model']['model_name'],
+                "dataset": config['dataset_name'],
+                "notes": config['wandb_note'],
+            },
+            name=config['run_name'],
+    )
 
     # Set random seed, deterministic
     torch.cuda.manual_seed(config['seed'])
@@ -176,6 +195,7 @@ if __name__ == '__main__':
 
         # Performance record - row
         recorder.add_row(row)
+        recorder.wandb_mlflow_log(model=model, log_dict=row, sample_image=None)
         
         # Performance record - plot
         recorder.save_plot(config['plot'])
