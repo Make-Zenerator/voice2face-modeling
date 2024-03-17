@@ -4,6 +4,12 @@ seed: 42
 debug: False
 verbose: False
 
+# Wandb
+project_name : "asksalk"
+run_name : "askal"
+wandb_note : "saklas"
+
+mlflow_exp_name : "xp"
 # Train / val
 val_size: 0.2
 
