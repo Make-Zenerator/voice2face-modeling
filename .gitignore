@@ -182,3 +182,5 @@ nohup*
 SimSwap/arcface_model/
 SimSwap/checkpoints/
 SimSwap/parsing_model/checkpoint/
+
+secret.py
