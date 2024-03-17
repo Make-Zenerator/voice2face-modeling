@@ -46,6 +46,8 @@ class Recorder():
         self.logger = logger
     
     def wandb_mlflow_log(self, model, log_dict,sample_image=None):
+        log_dict['lr'] = log_dict['lr'][0]
+        log_dict = {k: int(v) for k, v in log_dict.items()}
         mlflow.log_metrics(log_dict)
         mlflow.pytorch.log_model(
             pytorch_model=model,
