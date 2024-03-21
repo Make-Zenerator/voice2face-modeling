@@ -30,36 +30,7 @@ model:
     encoder_weights: noisy-student #imagenet
     # depth: 5
     classes: 4
-    activation: null
-
-model:
-  autoencoder:
-    model_name: VQVAE
-    args:
-      img_channels: 3
-      init_planes: 
-      planes_mults:
-      resnet_groups:
-      resnet_stacks:
-      up_mode:
-      scale:
-      attention:
-      attn_heads:
-      attn_dim:
-      latent_dim:
-      eps:
-      legacy_mid:
-      tanh_out:
-      num_embeddings: 256
-      z_channels: 32
-      commitment_cost: 0.2
-  diffusion:
-    model_name: LDM
-    args:
-  voiceencoder:
-    model_name: SF2F
-    args:
-      
+    activation: null    
 
 # Trainer
 n_epochs: 100
