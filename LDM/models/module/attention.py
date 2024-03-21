@@ -54,3 +54,33 @@ class LinearAttention(nn.Module):
         out = torch.einsum("b h d e, b h d n -> b h e n", context, q)
         out = rearrange(out, "b h c (x y) -> b (h c) x y", h=self.heads, x=h, y=w)
         return self.to_out(out)
+    
+class CrossAttention(nn.Module):
+    def __init__(self, dim, heads=4, dim_head=32, dropout=0.0):
+        super().__init__()
+        self.scale = dim_head ** -0.5
+        self.heads = heads
+        inner_dim = dim_head * heads
+
+        self.to_q = nn.Conv2d(dim, inner_dim, kernel_size=1, bias=False)
+        self.to_kv = nn.Conv2d(dim, inner_dim * 2, kernel_size=1, bias=False)
+
+        self.attend = nn.Softmax(dim=-1)
+        self.to_out = nn.Sequential(
+            nn.Conv2d(inner_dim, dim, 1),
+            nn.Dropout(dropout)
+        )
+
+    def forward(self, x, context):
+        b, _, h, w = x.shape
+        q = self.to_q(x)
+        k, v = self.to_kv(context).chunk(2, dim=1)
+        q, k, v = map(lambda t: rearrange(t, 'b (heads c) h w -> (b heads) (h w) c', heads=self.heads), (q, k, v))
+
+        q *= self.scale
+        sim = torch.matmul(q, k.transpose(-2, -1))
+        attn = self.attend(sim)
+
+        out = torch.matmul(attn, v)
+        out = rearrange(out, '(b heads) (h w) c -> b (heads c) h w', b=b, heads=self.heads, h=h, w=w)
+        return self.to_out(out)
