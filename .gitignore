@@ -171,6 +171,7 @@ data/
 *.onnx
 *.tar
 *.ipynb
+*.ckpt
 
 .vscode/
 output/
