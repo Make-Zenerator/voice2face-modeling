@@ -52,11 +52,11 @@ class VectorQuantizer(nn.Module):
         return loss, quantized, encoding_indices
         
 class VQVAE(nn.Module):
-    def __init__(self, im_channels, model_config):
+    def __init__(self, model_config):
         super(VQVAE, self).__init__()
         # Encoder Configuration
         self.encoder = Encoder(
-                            in_planes=im_channels,
+                            in_planes=model_config['img_channels'],
                             init_planes=model_config['init_planes'],
                             planes_mults=model_config['planes_mults'],
                             resnet_grnorm_groups=model_config['resnet_groups'],
@@ -68,23 +68,12 @@ class VQVAE(nn.Module):
                             eps=model_config['eps'],
                             legacy_mid=model_config['legacy_mid']
                         )
-        # self.encoder = nn.Sequential(
-        #     nn.Conv2d(im_channels, model_config['down_channels'][0], kernel_size=3, padding=1),
-        #     *[DownBlock(in_ch, out_ch, t_emb_dim=None, down_sample=True, 
-        #                 num_heads=model_config['num_heads'], num_layers=model_config['num_down_layers'],
-        #                 attn=model_config['attn_down'][i], norm_channels=model_config['norm_channels'], 
-        #                 cross_attn=False) 
-        #       for i, (in_ch, out_ch) in enumerate(zip(model_config['down_channels'][:-1], model_config['down_channels'][1:]))],
-        #     MidBlock(model_config['mid_channels'][0], model_config['mid_channels'][-1], 
-        #              t_emb_dim=None, num_heads=model_config['num_heads'], num_layers=model_config['num_mid_layers'],
-        #              norm_channels=model_config['norm_channels'], cross_attn=False),
-        # )
         
         # Decoder Configuration
         self.decoder = Decoder(
                             in_planes=model_config['latent_dim'],
                             init_planes=model_config['init_planes'],
-                            out_planes=im_channels,
+                            out_planes=model_config['img_channels'],
                             plains_divs=model_config['plains_divs'],
                             resnet_grnorm_groups=model_config['resnet_groups'],
                             resnet_stacks=model_config['resnet_stacks'],
@@ -97,19 +86,9 @@ class VQVAE(nn.Module):
                             legacy_mid=model_config['legacy_mid'],
                             tanh_out=model_config['tanh_out'],
                         )
-        # self.decoder = nn.Sequential(
-        #     MidBlock(model_config['mid_channels'][-1], model_config['mid_channels'][0], 
-        #              t_emb_dim=None, num_heads=model_config['num_heads'], num_layers=model_config['num_mid_layers'],
-        #              norm_channels=model_config['norm_channels'], cross_attn=False),
-        #     *[UpBlock(in_ch, out_ch, t_emb_dim=None, up_sample=True, 
-        #               num_heads=model_config['num_heads'], num_layers=model_config['num_up_layers'],
-        #               attn=model_config['attn_up'][i], norm_channels=model_config['norm_channels'])
-        #       for i, (in_ch, out_ch) in enumerate(zip(reversed(model_config['down_channels'][1:]), reversed(model_config['down_channels'][:-1])))],
-        #     nn.Conv2d(model_config['down_channels'][0], im_channels, kernel_size=3, padding=1),
-        # )
 
         # Vector Quantizer
-        self.vq = VectorQuantizer(model_config['codebook_size'], model_config['z_channels'], model_config['commitment_cost'])
+        self.x = VectorQuantizer(model_config['num_embeddings'], model_config['z_channels'], model_config['commitment_cost'])
 
         # Final layers for encoder and decoder
         self.encoder_final = nn.Conv2d(model_config['down_channels'][-1], model_config['z_channels'], kernel_size=1, padding=0)
