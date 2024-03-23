@@ -24,15 +24,6 @@ drop_last: False
 
 # Model
 model:
-  model_name: Unet
-  args:
-    encoder_name: timm-efficientnet-b0 #timm-regnety_016
-    encoder_weights: noisy-student #imagenet
-    # depth: 5
-    classes: 4
-    activation: null
-
-model:
   autoencoder:
     model_name: VQVAE
     args:
@@ -53,11 +44,11 @@ model:
       num_embeddings: 256
       z_channels: 32
       commitment_cost: 0.2
-  diffusion:
-    model_name: LDM
-    args:
   voiceencoder:
     model_name: SF2F
+    args:
+  diffusion:  
+    model_name: UNET
     args:
       
 
