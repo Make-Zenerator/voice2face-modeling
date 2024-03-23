@@ -291,11 +291,11 @@ class UNetWithCrossAttention(nn.Module):
 
 
 class LatentDiffusion(nn.Module):
-    def __init__(self, unet, voice_encoder, vqvae_config, betas):
+    def __init__(self, unet, voice_encoder, vqvae, betas):
         super(LatentDiffusion, self).__init__()
         self.unet = unet
         self.voice_encoder = voice_encoder
-        self.autoencoder = VQVAE(vqvae_config['in_channels'], vqvae_config)
+        self.autoencoder = vqvae
         self.num_timesteps = len(betas)
         self.sqrt_alphas_cumprod = torch.sqrt(1.0 - torch.tensor(betas).cumprod(dim=0))
         # self.vector_quantizer = self.autoencoder.vq
@@ -350,88 +350,4 @@ class LatentDiffusion(nn.Module):
         t_emb = time_steps[:, None].repeat(1, temb_dim // 2) / factor
         t_emb = torch.cat([torch.sin(t_emb), torch.cos(t_emb)], dim=-1)
         return t_emb
-# import torch
-# from torch import nn
-# import torch.nn.functional as F
-
-# from models.module.blocks import ConvBlock, DownBlock, UpBlock
-# from models.module.attention import CrossAttention
-# from models.module.vqvae import VQVAE
-
-# class UNetWithCrossAttention(nn.Module):
-#     def __init__(self, image_channels, model_channels, num_res_blocks, num_heads=4, dim_head=32, dropout=0.0):
-#         super(UNetWithCrossAttention, self).__init__()
-#         self.init_conv = nn.Conv2d(image_channels, model_channels, 3, padding=1)
-        
-#         self.down_blocks = nn.ModuleList([
-#             DownBlock(model_channels * (2 ** i), model_channels * (2 ** (i + 1)), stride=2)
-#             for i in range(num_res_blocks)
-#         ])
-        
-#         self.up_blocks = nn.ModuleList([
-#             ConvBlock(model_channels * (2 ** (i + 1)), model_channels * (2 ** i))
-#             for i in reversed(range(num_res_blocks))
-#         ])
-        
-#         self.cross_attn_blocks = nn.ModuleList([
-#             CrossAttention(model_channels * (2 ** i), heads=num_heads, dim_head=dim_head, dropout=dropout)
-#             for i in range(num_res_blocks)
-#         ])
-        
-#         self.final_conv = nn.Conv2d(model_channels, image_channels, 1)
-
-#     def forward(self, x, context=None):
-#         x = self.init_conv(x)
-#         residuals = []
-#         for i, down_block in enumerate(self.down_blocks):
-#             x = down_block(x)
-#             residuals.append(x)
-
-#         for i, (up_block, residual) in enumerate(zip(self.up_blocks, reversed(residuals))):
-#             x = F.interpolate(x, scale_factor=2, mode='nearest') 
-#             x = torch.cat([x, residual], dim=1)
-#             x = up_block(x)
-#             if context is not None:
-#                 x = self.cross_attn_blocks[i](x, context)
-
-#         x = self.final_conv(x)
-#         return x
-
-# class LatentDiffusion(nn.Module):
-#     def __init__(self, unet, voice_encoder, vqvae_config, codebook_size, z_channels, betas):
-#         super(LatentDiffusion, self).__init__()
-#         self.unet = unet
-#         self.voice_encoder = voice_encoder
-#         self.autoencoder = VQVAE(vqvae_config['in_channels'], vqvae_config)
-#         self.num_timesteps = len(betas)
-#         self.sqrt_alphas_cumprod = torch.sqrt(1.0 - torch.tensor(betas).cumprod(dim=0))
-#         # self.vector_quantizer = self.autoencoder.vq
-
-#     def q_sample(self, x_start, t, noise=None):
-#         if noise is None:
-#             noise = torch.randn_like(x_start)
-#         return (
-#             x_start * self.sqrt_alphas_cumprod[t].view(1, -1, 1, 1)
-#             + noise * torch.sqrt(1.0 - self.sqrt_alphas_cumprod[t].view(1, -1, 1, 1))
-#         )
-
-#     def forward(self, x, voice_condition, t):
-#         t_emb = self.get_time_embedding(x.size(0), t)
-#         # Vector quantization
-#         # _, diff, _ = self.vector_quantizer(x)
-#         q_loss, diff, _ = self.autoencoder.encode(x)
-
-#         # Apply diffusion process
-#         x_noisy = self.q_sample(diff, t)
-
-#         # Encode voice condition
-#         voice_emb, _ = self.voice_encoder(voice_condition)
-
-#         # Generate latent representation using UNet
-#         latent = self.unet(x_noisy, context=voice_emb)
-        
-#         # Decode latent representation
-#         # decoded = self.unet.decode(latent)
-#         decoded = self.autoencoder.decode(latent)
-        
-#         return decoded
+    

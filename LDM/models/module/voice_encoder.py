@@ -68,8 +68,8 @@ class SF2FEncoder(nn.Module):
         self.return_seq = return_seq
         self.output_channel = output_channel
 
-        self.segments_fusion = segments_fusion
-        self.normalize_fusion = normalize_fusion
+        # self.segments_fusion = segments_fusion
+        # self.normalize_fusion = normalize_fusion
         # if segments_fusion:
         #     #self.attn_fuser = Attention(
         #     #    output_channel,
@@ -101,15 +101,15 @@ class SF2FEncoder(nn.Module):
             if self.normalize_embedding:
                 embeddings = F.normalize(embeddings)
 
-        # Restore Tensor shape
-        if fusion_mode:
-            #print(embeddings.shape)
-            C_emb = embeddings.shape[1]
-            embeddings = embeddings.view(B, N, C_emb)
-            # Attention fusion
-            embeddings = self.attn_fuser(embeddings)
-            if self.normalize_fusion:
-                embeddings = F.normalize(embeddings)
+        # # Restore Tensor shape
+        # if fusion_mode:
+        #     #print(embeddings.shape)
+        #     C_emb = embeddings.shape[1]
+        #     embeddings = embeddings.view(B, N, C_emb)
+        #     # Attention fusion
+        #     embeddings = self.attn_fuser(embeddings)
+        #     if self.normalize_fusion:
+        #         embeddings = F.normalize(embeddings)
 
         if self.return_seq:
             return embeddings, x
