@@ -1,0 +1,8 @@
+mlflow
+wandb
+tqdm
+opencv-python
+webrtcvad
+pickle5
+einops
+python_speech_features
