@@ -1,13 +1,13 @@
 # System
-gpu_num: 0
+gpu_num: 1
 seed: 42
 debug: False
 verbose: False
 
 # Wandb
-project_name : "asksalk"
-run_name : "askal"
-wandb_note : "saklas"
+project_name : "voice2face"
+run_name : "ldm"
+wandb_note : "ldm"
 
 mlflow_exp_name : "xp"
 # Train / val
@@ -24,8 +24,19 @@ drop_last: False
 
 # Model
 model:
-  autoencoder:
-    model_name: VQVAE
+  timesteps: 500
+  scheduler_name: linear
+  model_name: UNET
+    args:
+      image_channels: 3
+      model_channels: 64 
+      num_res_blocks: 4
+      num_heads: 4
+      dim_head: 32
+      dropout: 0.1
+  model_name: SF2F
+    args: 
+  model_name: VQVAE
     args:
       img_channels: 3
       init_planes: 
@@ -44,12 +55,6 @@ model:
       num_embeddings: 256
       z_channels: 32
       commitment_cost: 0.2
-  voiceencoder:
-    model_name: SF2F
-    args:
-  diffusion:  
-    model_name: UNET
-    args:
       
 
 # Trainer
