@@ -13,11 +13,7 @@ class SF2FEncoder(nn.Module):
                  add_noise=False,
                  normalize_embedding=False,
                  return_seq=False,
-                 inception_mode=False,
-                 segments_fusion=False,
-                 normalize_fusion=False,
-                 fuser_arch='Attention',
-                 fuser_kwargs=None):
+                 inception_mode=False):
         super(SF2FEncoder, self).__init__()
         if inception_mode:
             self.model = nn.Sequential(
@@ -127,16 +123,16 @@ class SF2FEncoder(nn.Module):
             if param.requires_grad:
                 print(name)
 
-    def train_fuser_only(self):
-        print('Training Attention Fuser Only')
-        for name, param in self.named_parameters():
-            if 'attn_fuser' in name:
-                param.requires_grad = True
-            else:
-                param.requires_grad = False
+    # def train_fuser_only(self):
+    #     print('Training Attention Fuser Only')
+    #     for name, param in self.named_parameters():
+    #         if 'attn_fuser' in name:
+    #             param.requires_grad = True
+    #         else:
+    #             param.requires_grad = False
 
-    def init_attn_fusion(self):
-        self.attn_fuser = Attention(
-            self.output_channel,
-            self.output_channel,
-            ignore_tanh=True)
+    # def init_attn_fusion(self):
+    #     self.attn_fuser = Attention(
+    #         self.output_channel,
+    #         self.output_channel,
+    #         ignore_tanh=True)
