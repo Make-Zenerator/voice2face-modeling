@@ -98,7 +98,7 @@ metrics:
   - mssim
   - lpips
   - fid
-earlystopping_target: val_miou
+earlystopping_target: fid
 earlystopping_patience: 5
 optimizer:
   name: AdamW
@@ -113,8 +113,8 @@ scheduler:
 
 # Logging
 plot:
-  - loss
-  - miou
-  - iou1
-  - iou2
-  - iou3
+  - psnr
+  - ssim
+  - mssim
+  - lpips
+  - fid
