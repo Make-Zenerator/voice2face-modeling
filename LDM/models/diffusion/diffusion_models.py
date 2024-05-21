@@ -138,130 +138,6 @@ def ddpm_steps(x, seq, model, b, **kwargs):
             xs.append(sample.detach().to('cpu'))
     return xs, x0_preds
 
-class Diffusion(nn.Module):
-    def __init__(self, noise_dict: Dict, model,
-                 timesteps: int = 500, loss:str = 'l2',
-                 sample_every: int = 20,
-                 device: str = 'cuda'):
-        self.timesteps = timesteps
-        self.sample_every = sample_every
-        self.dev = device
-        betas =  get_betas(timesteps=timesteps, noise_kw = noise_dict) # noise_dict : model_config['noise_dict']
-        dif_params = forward_diffusion_params(betas, timesteps)
-        self.betas = dif_params[0]
-        self.sqrt_recip_alphas = dif_params[1]
-        self.sqrt_alphas_cumprod = dif_params[2]
-        self.sqrt_one_minus_alphas_cumprod = dif_params[3]
-        self.posterior_variance = dif_params[4]
-        self.loss = get_loss_function(loss)
-        self.model = model
-
-    def q_sample(self, x_start, t, noise=None):
-        """
-        Prior sample
-        """
-        if noise is None:
-            noise = torch.randn_like(x_start)
-
-        sqrt_alphas_cumprod_t = extract(self.sqrt_alphas_cumprod, t, x_start.shape)
-        sqrt_one_minus_alphas_cumprod_t = extract(
-            self.sqrt_one_minus_alphas_cumprod, t, x_start.shape)
-
-        return sqrt_alphas_cumprod_t * x_start + sqrt_one_minus_alphas_cumprod_t * noise
-
-    def forward_diffusion(self, x_start, t, noise=None):
-        if noise is None:
-            noise = torch.randn_like(x_start)
-
-        x_noisy = self.q_sample(x_start=x_start,
-                                t=t, noise=noise)
-        return x_noisy
-
-    def get_loss(self, x_start, t, noise=None, x_self_cond=None, classes=None):
-
-        if noise is None:
-            noise = torch.randn_like(x_start)
-
-        x_noisy = self.q_sample(x_start=x_start,
-                                t=t, noise=noise)
-
-        predicted_noise = self.model(x_noisy, t, x_self_cond=x_self_cond, lbls=classes)
-        return self.loss(noise, predicted_noise)
-
-    def p_sample(self, size, x_self_cond=None,
-                 classes=None, last = True,
-                 eta: float = 1.0):
-        """ Posterior sample """
-        x = torch.randn(*size, device=self.dev)
-        seq = range(0, self.timesteps, self.sample_every)
-        seq = [int(s) for s in list(seq)]
-        model_args = (x, x_self_cond, classes)
-        xs = generalized_steps(model_args, seq, self.model, self.betas, eta=eta)
-        if last:
-            return xs[0][-1]
-        else:
-            return xs
-
-class LatentDiffusion(Diffusion):
-    def __init__(self, unet, voice_encoder, vqvae, betas):
-        super(LatentDiffusion, self).__init__()
-        self.unet = unet
-        self.voice_encoder = voice_encoder
-        self.autoencoder = vqvae
-        self.num_timesteps = len(betas)
-        self.sqrt_alphas_cumprod = torch.sqrt(1.0 - torch.tensor(betas).cumprod(dim=0))
-        # self.vector_quantizer = self.autoencoder.vq
-
-    def q_sample(self, x_start, t, noise=None):
-        if noise is None:
-            noise = torch.randn_like(x_start)
-        return (
-            x_start * self.sqrt_alphas_cumprod[t].view(1, -1, 1, 1)
-            + noise * torch.sqrt(1.0 - self.sqrt_alphas_cumprod[t].view(1, -1, 1, 1))
-        )
-
-    def forward(self, x, voice_condition, t):
-        t_emb = self.get_time_embedding(x.size(0), t)
-        # Vector quantization
-        # _, diff, _ = self.vector_quantizer(x)
-        q_loss, diff, _ = self.autoencoder.encode(x)
-
-        # Apply diffusion process
-        x_noisy = self.q_sample(diff, t)
-
-        # Encode voice condition
-        voice_emb, _ = self.voice_encoder(voice_condition)
-
-        # Generate latent representation using UNet
-        latent = self.unet(x_noisy, context=voice_emb, t=t_emb)
-        
-        # Decode latent representation
-        # decoded = self.unet.decode(latent)
-        decoded = self.autoencoder.decode(latent)
-        
-        return decoded
-    
-    def get_time_embedding(time_steps, temb_dim):
-        r"""
-        Convert time steps tensor into an embedding using the
-        sinusoidal time embedding formula
-        :param time_steps: 1D tensor of length batch size
-        :param temb_dim: Dimension of the embedding
-        :return: BxD embedding representation of B time steps
-        """
-        assert temb_dim % 2 == 0, "time embedding dimension must be divisible by 2"
-        
-        # factor = 10000^(2i/d_model)
-        factor = 10000 ** ((torch.arange(
-            start=0, end=temb_dim // 2, dtype=torch.float32, device=time_steps.device) / (temb_dim // 2))
-        )
-        
-        # pos / factor
-        # timesteps B -> B, 1 -> B, temb_dim
-        t_emb = time_steps[:, None].repeat(1, temb_dim // 2) / factor
-        t_emb = torch.cat([torch.sin(t_emb), torch.cos(t_emb)], dim=-1)
-        return t_emb
-    
 class UNetWithCrossAttention(nn.Module):
     def __init__(self, model_config):
         super(UNetWithCrossAttention, self).__init__()
@@ -353,3 +229,142 @@ class UNetWithCrossAttention(nn.Module):
     def restore_weights(self):
         self.ema.restore()
 
+class LatentDiffusion(nn.Module):
+    def __init__(self, unet, voice_encoder, vqvae, betas):
+        super(LatentDiffusion, self).__init__()
+        self.unet = unet
+        self.voice_encoder = voice_encoder
+        self.autoencoder = vqvae
+        self.num_timesteps = len(betas)
+        self.sqrt_alphas_cumprod = torch.sqrt(1.0 - torch.tensor(betas).cumprod(dim=0))
+        # self.vector_quantizer = self.autoencoder.vq
+
+    def q_sample(self, x_start, t, noise=None):
+        if noise is None:
+            noise = torch.randn_like(x_start)
+        return (
+            x_start * self.sqrt_alphas_cumprod[t].view(1, -1, 1, 1)
+            + noise * torch.sqrt(1.0 - self.sqrt_alphas_cumprod[t].view(1, -1, 1, 1))
+        )
+    
+    def p_sample(self, size, x_self_cond=None,
+                 classes=None, last = True,
+                 eta: float = 1.0):
+        """ Posterior sample """
+        x = torch.randn(*size, device=self.dev)
+        seq = range(0, self.timesteps, self.sample_every)
+        seq = [int(s) for s in list(seq)]
+        model_args = (x, x_self_cond, classes)
+        xs = generalized_steps(model_args, seq, self.model, self.betas, eta=eta)
+        if last:
+            return xs[0][-1]
+        else:
+            return xs
+
+    def forward(self, x, voice_condition, t):
+        t_emb = self.get_time_embedding(x.size(0), t)
+        # Vector quantization
+        # _, diff, _ = self.vector_quantizer(x)
+        q_loss, diff, _ = self.autoencoder.encode(x)
+
+        # Apply diffusion process
+        x_noisy = self.q_sample(diff, t_emb)
+
+        # Encode voice condition
+        voice_emb, _ = self.voice_encoder(voice_condition)
+
+        # Generate latent representation using UNet
+        latent = self.unet(x_noisy, context=voice_emb, t=t_emb)
+        
+        # Decode latent representation
+        # decoded = self.unet.decode(latent)
+        decoded = self.autoencoder.decode(latent)
+        
+        return decoded
+    
+    def get_time_embedding(time_steps, temb_dim):
+        r"""
+        Convert time steps tensor into an embedding using the
+        sinusoidal time embedding formula
+        :param time_steps: 1D tensor of length batch size
+        :param temb_dim: Dimension of the embedding
+        :return: BxD embedding representation of B time steps
+        """
+        assert temb_dim % 2 == 0, "time embedding dimension must be divisible by 2"
+        
+        # factor = 10000^(2i/d_model)
+        factor = 10000 ** ((torch.arange(
+            start=0, end=temb_dim // 2, dtype=torch.float32, device=time_steps.device) / (temb_dim // 2))
+        )
+        
+        # pos / factor
+        # timesteps B -> B, 1 -> B, temb_dim
+        t_emb = time_steps[:, None].repeat(1, temb_dim // 2) / factor
+        t_emb = torch.cat([torch.sin(t_emb), torch.cos(t_emb)], dim=-1)
+        return t_emb
+    
+
+## 참고
+class Diffusion(nn.Module):
+    def __init__(self, noise_dict: Dict, model,
+                 timesteps: int = 500, loss:str = 'l2',
+                 sample_every: int = 20,
+                 device: str = 'cuda'):
+        self.timesteps = timesteps
+        self.sample_every = sample_every
+        self.dev = device
+        betas =  get_betas(timesteps=timesteps, noise_kw = noise_dict) # noise_dict : model_config['noise_dict']
+        dif_params = forward_diffusion_params(betas, timesteps)
+        self.betas = dif_params[0]
+        self.sqrt_recip_alphas = dif_params[1]
+        self.sqrt_alphas_cumprod = dif_params[2]
+        self.sqrt_one_minus_alphas_cumprod = dif_params[3]
+        self.posterior_variance = dif_params[4]
+        self.loss = get_loss_function(loss)
+        self.model = model
+
+    def q_sample(self, x_start, t, noise=None):
+        """
+        Prior sample
+        """
+        if noise is None:
+            noise = torch.randn_like(x_start)
+
+        sqrt_alphas_cumprod_t = extract(self.sqrt_alphas_cumprod, t, x_start.shape)
+        sqrt_one_minus_alphas_cumprod_t = extract(
+            self.sqrt_one_minus_alphas_cumprod, t, x_start.shape)
+
+        return sqrt_alphas_cumprod_t * x_start + sqrt_one_minus_alphas_cumprod_t * noise
+
+    def forward_diffusion(self, x_start, t, noise=None):
+        if noise is None:
+            noise = torch.randn_like(x_start)
+
+        x_noisy = self.q_sample(x_start=x_start,
+                                t=t, noise=noise)
+        return x_noisy
+
+    def get_loss(self, x_start, t, noise=None, x_self_cond=None, classes=None):
+
+        if noise is None:
+            noise = torch.randn_like(x_start)
+
+        x_noisy = self.q_sample(x_start=x_start,
+                                t=t, noise=noise)
+
+        predicted_noise = self.model(x_noisy, t, x_self_cond=x_self_cond, lbls=classes)
+        return self.loss(noise, predicted_noise)
+
+    def p_sample(self, size, x_self_cond=None,
+                 classes=None, last = True,
+                 eta: float = 1.0):
+        """ Posterior sample """
+        x = torch.randn(*size, device=self.dev)
+        seq = range(0, self.timesteps, self.sample_every)
+        seq = [int(s) for s in list(seq)]
+        model_args = (x, x_self_cond, classes)
+        xs = generalized_steps(model_args, seq, self.model, self.betas, eta=eta)
+        if last:
+            return xs[0][-1]
+        else:
+            return xs
