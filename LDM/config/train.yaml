@@ -13,14 +13,31 @@ mlflow_exp_name : "xp"
 # Train / val
 val_size: 0.2
 
-# Data Loader
-dataset_name : SegDataset
-input_width: 480
+# Dataset
+dataset_name : OLKAVS
+OLKAVS_DIR: /home/data/data_OLKAVS/OLKAVS/data
+input_width: 256
 input_height: 256
-scaler: normalize
+image_normalize: imagenet
+mel_normalize: vox_mel
+frame_width: 100
+frame_height: 150
+train_csv_path: /home/data/data_OLKAVS/OLKAVS/data/train.csv
+val_csv_path: /home/data/data_OLKAVS/OLKAVS/data/val.csv
+return_mel_segments: False
+mel_seg_width: 125
+mel_seg_height: 125
+image_avg: False
+image_flip: False
+
+# Data loader
 num_workers: 4
 shuffle: True
 drop_last: False
+
+# Trainer
+n_epochs: 100
+batch_size: 16
 
 # Model
 model:
@@ -35,40 +52,52 @@ model:
       dim_head: 32
       dropout: 0.1
   model_name: SF2F
-    args: 
+    args:
+      input_channel: 40
+      channels: [256, 384, 576, 864]
+      output_channel: 512
+      add_noise: False
+      normalize: True
+      return_seq: False
+      inception_mode: True
   model_name: VQVAE
     args:
       img_channels: 3
-      init_planes: 
-      planes_mults:
-      resnet_groups:
-      resnet_stacks:
-      up_mode:
-      scale:
-      attention:
-      attn_heads:
-      attn_dim:
-      latent_dim:
-      eps:
-      legacy_mid:
-      tanh_out:
+      init_planes: 32
+      planes_mults: (1, 2, 4, 8)
+      plains_divs: (8, 4, 2, 1)
+      resnet_groups: 4
+      resnet_stacks: 2
+      up_mode: bilinear
+      scale: 2
+      attention: []
+      attn_heads: 4
+      attn_dim: 32
+      latent_dim: 4
+      eps: 1e-5
+      legacy_mid: False
+      tanh_out: False
       num_embeddings: 256
       z_channels: 32
       commitment_cost: 0.2
-      
 
-# Trainer
-n_epochs: 100
-batch_size: 16
-loss: 
-  name: MeanCCELoss # MeanCCELoss
+loss:
+  name: VQLPIPSWithDiscriminator
   args:
-    weight: [1, 1, 1, 1]
+    disc_conditional: false
+    disc_in_channels: 3
+    disc_start: 250001
+    disc_weight: 0.75
+    disc_num_layers: 2
+    codebook_weight: 1.0
+    disc_loss: hinge
+    preceptual_loss: lpips
 metrics: 
-  - miou
-  - iou1
-  - iou2
-  - iou3
+  - psnr
+  - ssim
+  - mssim
+  - lpips
+  - fid
 earlystopping_target: val_miou
 earlystopping_patience: 5
 optimizer:
