@@ -17,8 +17,8 @@ def get_model(model_config):
     ldm = LatentDiffusion(unet=unet, 
                           voice_encoder=voice_model, 
                           vqvae=autoencoder, 
-                          betas=get_betas(model_config['timestepts'],
-                                          scheduler_name=model_config['scehdule_name'])
+                          betas=get_betas(model_config['timesteps'],
+                                          scheduler_name=model_config['scheduler_name'])
                          )
     return ldm
 
