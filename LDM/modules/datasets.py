@@ -35,8 +35,8 @@ def get_dataset_function(loss_function_str: str):
 OLKAVS_DIR = os.path.join('./data_OLKAVAS', 'OLKAVS')
 class OLKAVSDataset(Dataset):
     def __init__(self,
-                 data_dir,
-                 image_size=(64, 64),
+                 data_dir=OLKAVS_DIR,
+                 image_size=(256, 256),
                  face_type='masked',
                  image_normalize_method='imagenet',
                  mel_normalize_method='vox_mel',
