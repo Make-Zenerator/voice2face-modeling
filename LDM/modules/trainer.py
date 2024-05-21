@@ -52,8 +52,9 @@ class Trainer():
             y_pred = self.model(x)
             
             # Loss
-            loss = self.loss_func(y_pred, y)
-
+            loss, log = self.loss_func(codebook_loss=None, inputs=y, reconstructions=y_pred, optimizer_idx=1,
+                global_step=batch_id, last_layer=None, cond=None, split="train", predicted_indices=None)
+        
             # Update
             self.optimizer.zero_grad()
             loss.backward()
@@ -65,6 +66,7 @@ class Trainer():
             # History
             self.loss += loss.item()
             self.logger.debug(f"TRAINER | train epoch: {epoch_index}, batch: {batch_id}/{len(dataloader)-1}, loss: {loss.item()}")
+            self.logger.debug(f"TRAINER | {log}")
             self.logger.debug(f"TRAINER | {filename}")
 
         self.scheduler.step()
@@ -86,7 +88,9 @@ class Trainer():
                 y_pred = self.model(x)
 
                 # Loss
-                loss = self.loss_func(y_pred, y)
+                loss, log = self.loss_func(codebook_loss=None, inputs=y, reconstructions=y_pred, optimizer_idx=1,
+                    global_step=batch_id, last_layer=None, cond=None, split="val", predicted_indices=None)
+        
 
                 # Metric
                 for metric_name, metric_func in self.metric_funcs.items():
@@ -97,6 +101,7 @@ class Trainer():
 
         self.loss = self.loss / len(dataloader)
         self.logger.debug(f"TRAINER | val/test epoch: {epoch_index}, batch: {batch_id}/{len(dataloader)-1}, loss: {loss.item()}")
+        self.logger.debug(f"TRAINER | {log}")
         self.logger.debug(f"TRAINER | {filename}")
         
     def clear_history(self):

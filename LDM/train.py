@@ -86,14 +86,31 @@ if __name__ == '__main__':
     train_dataset = get_dataset_function(config['dataset_name']) 
     val_dataset = get_dataset_function(config['dataset_name'])
     
-    train_dataset = train_dataset(paths=train_img_paths,
-                            input_size=[config['input_width'], config['input_height']],
-                            scaler=get_image_scaler(config['scaler']),
-                            logger=logger)
-    val_dataset = val_dataset(paths=val_img_paths,
-                            input_size=[config['input_width'], config['input_height']],
-                            scaler=get_image_scaler(config['scaler']),
-                            logger=logger)
+    train_dataset = train_dataset(data_dir=config['OLKAVS_DIR'],
+                                  image_size=(config['input_width'], config['input_height']),
+                                  face_type=config['face_type'],
+                                  image_normalize_method=config['image_normalize'],
+                                  mel_normalize_method=config['mel_normalize'],
+                                  nframe_range=(config['frame_width'], config['frame_height']),
+                                  split_set='train',
+                                  split_csv=config['csv_path'],
+                                  return_mel_segments=config['return_mel_segments'],
+                                  mel_seg_window_stride=(config['mel_seg_width'], config['mel_seg_height']),
+                                  image_left_right_avg=config['image_avg'],
+                                  image_random_hflip=config['image_flip'])
+
+    val_dataset = val_dataset(data_dir=config['OLKAVS_DIR'],
+                                  image_size=(config['input_width'], config['input_height']),
+                                  face_type=config['face_type'],
+                                  image_normalize_method=config['image_normalize'],
+                                  mel_normalize_method=config['mel_normalize'],
+                                  nframe_range=(config['frame_width'], config['frame_height']),
+                                  split_set='train',
+                                  split_csv=config['csv_path'],
+                                  return_mel_segments=config['return_mel_segments'],
+                                  mel_seg_window_stride=(config['mel_seg_width'], config['mel_seg_height']),
+                                  image_left_right_avg=config['image_avg'],
+                                  image_random_hflip=config['image_flip'])
     # Create data loader
     train_dataloader = DataLoader(dataset=train_dataset,
                                 batch_size=config['batch_size'],
@@ -110,7 +127,7 @@ if __name__ == '__main__':
     logger.info(f"Load dataset, train: {len(train_dataset)}, val: {len(val_dataset)}")
     
     # Load model
-    model = get_model(model_str=config['model']['model_name'])
+    model = get_model(model_str=config['model'])
     model = model(**config['model']['args']).to(device)
     logger.info(f"Load model architecture: {config['model']['model_name']}")
 
