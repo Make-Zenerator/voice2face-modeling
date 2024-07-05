@@ -1,0 +1,86 @@
+# System
+gpu_num: 0
+seed: 42
+debug: False
+verbose: False
+
+# Wandb
+project_name : "asksalk"
+run_name : "askal"
+wandb_note : "saklas"
+
+mlflow_exp_name : "xp"
+# Train / val
+val_size: 0.2
+
+# Data Loader
+dataset_name : SegDataset
+input_width: 480
+input_height: 256
+scaler: normalize
+num_workers: 4
+shuffle: True
+drop_last: False
+
+# Model
+model:
+  autoencoder:
+    model_name: VQVAE
+    args:
+      img_channels: 3
+      init_planes: 
+      planes_mults:
+      resnet_groups:
+      resnet_stacks:
+      up_mode:
+      scale:
+      attention:
+      attn_heads:
+      attn_dim:
+      latent_dim:
+      eps:
+      legacy_mid:
+      tanh_out:
+      num_embeddings: 256
+      z_channels: 32
+      commitment_cost: 0.2
+  voiceencoder:
+    model_name: SF2F
+    args:
+  diffusion:  
+    model_name: UNET
+    args:
+      
+
+# Trainer
+n_epochs: 100
+batch_size: 16
+loss: 
+  name: MeanCCELoss # MeanCCELoss
+  args:
+    weight: [1, 1, 1, 1]
+metrics: 
+  - miou
+  - iou1
+  - iou2
+  - iou3
+earlystopping_target: val_miou
+earlystopping_patience: 5
+optimizer:
+  name: AdamW
+  args:
+    lr: 5.0e-04
+    weight_decay: 5.0e-02
+scheduler:
+  name: CosineAnnealingLR
+  args:
+    T_max: 100
+    eta_min: 0
+
+# Logging
+plot:
+  - loss
+  - miou
+  - iou1
+  - iou2
+  - iou3

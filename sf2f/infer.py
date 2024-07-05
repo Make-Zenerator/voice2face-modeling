@@ -62,7 +62,7 @@ def main():
     except:
         shutil.rmtree(result_dir)
         shutil.copytree(args.input_wav_dir, result_dir)
-    voice_path = os.path.join(result_dir, '*/*/*.wav')
+    voice_path = os.path.join(result_dir, '*.wav')
     voice_list = glob.glob(voice_path)
     for filename in voice_list:
         result_sub_dir = filename.replace('.wav', '')
@@ -115,6 +115,7 @@ def main():
                 img_np = imgs_fused[j].numpy().transpose(1, 2, 0)
                 img_path = os.path.join(result_sub_dir, 'fused_%d.png' % j)
                 imwrite(img_path, img_np)
+        print(f"Done. file name : {filename}")
 
 if __name__ == '__main__':
     main()
