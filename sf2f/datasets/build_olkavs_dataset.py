@@ -23,12 +23,16 @@ class OLKAVSDataset(Dataset):
         mfcc_image = Image.open(mfcc_image_path).convert('RGB')
         if self.mfcc_transform:
             mfcc_image = self.mfcc_transform(mfcc_image)
+        else:
+            mfcc_image = transforms.Resize((256, 256))(mfcc_image)
         
         # 얼굴 이미지 로드 및 변환
         face_image_path = self.data_frame.iloc[idx, 1]
         face_image = Image.open(face_image_path).convert('RGB')
         if self.face_transform:
             face_image = self.face_transform(face_image)
+        else:
+            face_image = transforms.Resize((256, 256))(face_image)
 
         # 나머지 값 로드
         video_env = self.data_frame.iloc[idx, 2]

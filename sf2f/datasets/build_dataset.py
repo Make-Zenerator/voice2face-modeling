@@ -4,7 +4,7 @@ import os.path as osp
 import numpy as np
 from datasets import VoxDataset
 from torch.utils.data import DataLoader
-
+from build_olkavs_dataset import OLKAVSDataset
 
 VOX_DIR = os.path.join('./data', 'VoxCeleb')
 
@@ -42,6 +42,8 @@ def build_dataset(opts):
     if opts["dataset"] == "vox":
         return build_vox_dsets(opts["data_opts"], opts["batch_size"],
                               opts["image_size"])
+    elif opts["dataset"] == "olk":
+        return OLKAVSDataset('/home/data/new_OLKAVS_data/OLKVS_train_dataset.csv'),OLKAVSDataset('/home/data/new_OLKAVS_data/OLKVS_valid_dataset.csv'),OLKAVSDataset('/home/data/new_OLKAVS_data/OLKVS_test_dataset.csv')
     else:
         raise ValueError("Unrecognized dataset: {}".format(opts["dataset"]))
 
