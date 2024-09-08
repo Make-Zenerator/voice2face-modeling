@@ -2,13 +2,22 @@
 # Encoder: Inceptional 1D CNN
 # Decoder: Upsampling + CNN
 logs:
-  name: sf2f_1st_stage
-  output_dir: /workspace/voice2face-modeling/sf2f/output
-  run_name: sf2f_1st_stage_vox
+  name: olkavs_sf2f_1st_stage
+  output_dir: /workspace/voice2face-modeling/sf2f/output/olkavs
+  run_name: sf2f_1st_stage_olk_1/50
+# mlflow settings
+mlflow:
+  timeout: 36000
+  MLFLOW_S3_ENDPOINT_URL: http://storage.makezenerator.site:9000
+  MLFLOW_TRACKING_URI: http://storage.makezenerator.site:5001
+  AWS_ACCESS_KEY_ID: minio
+  AWS_SECRET_ACCESS_KEY: miniostorage
+  experiment: sf2f_olkavs
 # data-related settings
 data:
-  dataset: vox
-  data_opts_path: /workspace/voice2face-modeling/sf2f/options/data_opts/vox.yaml
+  dataset: olk
+  data_size: 50
+  data_opts_path: /workspace/voice2face-modeling/sf2f/options/data_opts/olk.yaml
   image_size: [64, 64]
 # model related settings
 generator:
@@ -16,11 +25,19 @@ generator:
   options:
     encoder_arch: V2F1DCNN
     encoder_kwargs:
-      input_channel: 40
+      input_channel: 308
       channels: [256, 384, 576, 864]
       output_channel: 512
       normalize_embedding: True
       inception_mode: True
+      segments_fusion: True
+      normalize_fusion: True
+      fuser_arch: AttentionFuserV1
+      fuser_kwargs:
+        dimensions: 512
+        dim_out: 512
+        attention_type: general
+        ignore_tanh: True
     decoder_arch: FaceGanDecoder
     decoder_kwargs:
       noise_dim: 512

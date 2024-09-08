@@ -4,14 +4,14 @@ from models.module import vqvae, voice_encoder
 def get_model(model_config):
     model_str = model_config['model_name']
     
-    for i in range(len(model_str)):
+    for model in model_str:
             
-        if model_str == 'VQVAE':
-            autoencoder = vqvae.VQVAE(model_config[model_str]['args'])
-        elif model_str == 'SF2F':
-            voice_model = voice_encoder.SF2FEncoder(model_config[model_str]['args'])
-        elif model_str == 'UNET':
-            unet = UNetWithCrossAttention(model_config[model_str]['args'])
+        if model == 'VQVAE':
+            autoencoder = vqvae.VQVAE(model_config[model]['args'])
+        elif model == 'SF2F':
+            voice_model = voice_encoder.SF2FEncoder(model_config[model]['args'])
+        elif model == 'UNET':
+            unet = UNetWithCrossAttention(model_config[model]['args'])
     # elif model_str == 'CLIP':
     #     return diffusion_models.CLIP
     ldm = LatentDiffusion(unet=unet, 

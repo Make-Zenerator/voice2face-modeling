@@ -27,10 +27,10 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from utils.filter_pickle import filtering_pickle
 
 
-VOX_DIR = os.path.join('./data/VoxCeleb')
+VOX_DIR = os.path.join('/workspace/data_Voxceleb')
 vox1_raw = os.path.join(VOX_DIR, 'raw_wav', 'vox1')
 # vox2_raw = os.path.join(VOX_DIR, 'raw_wav', 'vox2')
-vox1_meta_csv = os.path.join(VOX_DIR, 'vox1', 'vox1_meta.csv')
+vox1_meta_csv = os.path.join(VOX_DIR, 'vox1_meta.csv')
 # vox2_meta_csv = os.path.join(VOX_DIR, 'vox2', 'full_vox2_meta.csv')
 
 parser = argparse.ArgumentParser()
@@ -206,8 +206,9 @@ def main():
     #wav_convertor.convert_identity(
     #    'data/VoxCeleb/raw_wav/vox1/dev/id10001/',
     #    './data/test', 'vox1')
+    # gfile.mkdir('/workspace/data_Voxceleb/vox1/mel_spectrograms')
 
-    dir_path = './sf2f/data/VoxCeleb/vox1/mel_spectrograms' # wav_convertor.vox1_mel
+    dir_path = '/workspace/data_Voxceleb/vox1/mel_spectrograms' # wav_convertor.vox1_mel
     filtering_pickle(dir_path)
 
 

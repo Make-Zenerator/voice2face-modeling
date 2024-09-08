@@ -89,19 +89,19 @@ def visualize_sample(model,
             attn_weight = attn_weights[0].cpu().detach().numpy()
 
     samples = torch.cat(samples, dim=3)
-    samples = {
-            "samples": tensor2im(
-                imagenet_deprocess_batch(
-                    samples,
-                    rescale=False,
-                    normalize_method=image_normalize_method
-                ).squeeze(0)
-            ),
-            #"mel_spectrogram": get_np_plot(
-            #    plot_mel_spectrogram(
-            #        log_mel)
-            #)
-    }
+    # samples = {
+    #         "samples": tensor2im(
+    #             imagenet_deprocess_batch(
+    #                 samples,
+    #                 rescale=False,
+    #                 normalize_method=image_normalize_method
+    #             ).squeeze(0)
+    #         ),
+    #         #"mel_spectrogram": get_np_plot(
+    #         #    plot_mel_spectrogram(
+    #         #        log_mel)
+    #         #)
+    # }
     if visualize_attn:
         samples['attention_weights'] = get_np_plot(
             plot_attention(attn_weight))
@@ -119,7 +119,9 @@ def check_model(args,
                 options,
                 t,
                 loader,
-                model):
+                model,
+                wandb_logger,
+                metrics):
     training_status = model.training
     model.eval()
     float_dtype = torch.cuda.FloatTensor
@@ -141,7 +143,7 @@ def check_model(args,
             width=50):
             # Loop logic
             ######### unpack the data #########
-            imgs, log_mels, human_ids = batch
+            imgs, log_mels, human_ids, genders = batch
             imgs = imgs.cuda()
             log_mels = log_mels.type(float_dtype)
             human_ids = human_ids.type(long_dtype)
@@ -175,6 +177,10 @@ def check_model(args,
             for loss_name, loss_val in losses.items():
                 all_losses[loss_name].append(loss_val)
             num_samples += imgs.size(0)
+            metric_score = metrics(imgs, imgs_pred, device='cuda')
+            wandb_logger.append_metrics(batch_size=imgs.shape[0], labels=genders, metrics_scores=metric_score)
+        
+        wandb_logger.wandb_logging(epoch=t, sub_dataset='val')
 
         samples = visualize_sample(
             model,

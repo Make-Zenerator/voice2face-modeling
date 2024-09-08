@@ -16,14 +16,11 @@ from _thread import start_new_thread
 import queue
 from python_speech_features import logfbank
 import webrtcvad
-try:
-    import vad_ex
-except:
-    from utils import vad_ex
+from . import vad_ex
 
 import json
 import pickle
-from utils import imagenet_preprocess
+from .utils import imagenet_preprocess
 import PIL
 from torch.utils.data.dataloader import default_collate
 
@@ -109,7 +106,7 @@ class OLKAVSDataset(Dataset):
         with open(image_path, 'rb') as f:
             with PIL.Image.open(f) as image:
                 WW, HH = image.size
-                #print("PIL Image:", np.array(image))
+                # print("PIL Image:", np.array(image))
                 image = image.convert('RGB')
                 if self.image_left_right_avg:
                     arr = (np.array(image) / 2.0 + \
@@ -150,7 +147,7 @@ class OLKAVSDataset(Dataset):
             with open(image_path, 'rb') as f:
                 with PIL.Image.open(f) as image:
                     WW, HH = image.size
-                    #print("PIL Image:", np.array(image))
+                    # print("PIL Image:", np.array(image))
                     image = self.image_transform(image.convert('RGB'))
                     faces.append(image)
         faces = torch.stack(faces)
@@ -236,7 +233,7 @@ class OLKAVSDataset(Dataset):
         '''
         self.available_names = []
         # List VoxCeleb1 data:
-        for sub_dataset in (['vox1']): #, 'vox2'
+        for sub_dataset in (['voice']): #, 'vox2'
             mel_gram_available = os.listdir(
                 os.path.join(self.data_dir, sub_dataset, 'mel_spectrograms'))
             face_available = os.listdir(

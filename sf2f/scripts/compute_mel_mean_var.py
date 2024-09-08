@@ -23,7 +23,7 @@ def mean():
         mel_normalize_method=None)
     loader_kwargs = {
         'batch_size': 128,
-        'num_workers': 8,
+        'num_workers': 16,
         'shuffle': False,
         "drop_last": True,
     }

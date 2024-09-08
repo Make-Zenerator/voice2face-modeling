@@ -1,29 +1,29 @@
 # System
-gpu_num: 1
+gpu_num: 0
 seed: 42
-debug: False
+debug: True
 verbose: False
 
 # Wandb
-project_name : "voice2face"
-run_name : "ldm"
-wandb_note : "ldm"
-
-mlflow_exp_name : "xp"
+project_name : voice2face
+run_name : ldm
+wandb_note : ldm
+mlflow_exp_name : xp
 # Train / val
 val_size: 0.2
 
 # Dataset
 dataset_name : OLKAVS
-OLKAVS_DIR: /home/data/data_OLKAVS/OLKAVS/data
+OLKAVS_DIR: /workspace/data_OLKAVS/OLKAVS/data
 input_width: 256
 input_height: 256
 image_normalize: imagenet
 mel_normalize: vox_mel
+face_type: masked
 frame_width: 100
 frame_height: 150
-train_csv_path: /home/data/data_OLKAVS/OLKAVS/data/train.csv
-val_csv_path: /home/data/data_OLKAVS/OLKAVS/data/val.csv
+train_csv_path: /workspace/data_OLKAVS/OLKAVS/data/train.csv
+val_csv_path: /workspace/data_OLKAVS/OLKAVS/data/val.csv
 return_mel_segments: False
 mel_seg_width: 125
 mel_seg_height: 125
@@ -40,19 +40,20 @@ n_epochs: 100
 batch_size: 16
 
 # Model
-model:
+model: 
   timesteps: 500
   scheduler_name: linear
-  model_name: UNET
-    args:
+  model_name: [UNET, SF2F, VQVAE]
+  UNET: 
+    args: 
       image_channels: 3
       model_channels: 64 
       num_res_blocks: 4
       num_heads: 4
       dim_head: 32
       dropout: 0.1
-  model_name: SF2F
-    args:
+  SF2F:
+    args: 
       input_channel: 40
       channels: [256, 384, 576, 864]
       output_channel: 512
@@ -60,8 +61,8 @@ model:
       normalize: True
       return_seq: False
       inception_mode: True
-  model_name: VQVAE
-    args:
+  VQVAE: 
+    args: 
       img_channels: 3
       init_planes: 32
       planes_mults: (1, 2, 4, 8)
@@ -83,7 +84,7 @@ model:
 
 loss:
   name: VQLPIPSWithDiscriminator
-  args:
+  args: 
     disc_conditional: false
     disc_in_channels: 3
     disc_start: 250001
@@ -100,19 +101,19 @@ metrics:
   - fid
 earlystopping_target: fid
 earlystopping_patience: 5
-optimizer:
+optimizer: 
   name: AdamW
   args:
     lr: 5.0e-04
     weight_decay: 5.0e-02
-scheduler:
+scheduler: 
   name: CosineAnnealingLR
-  args:
+  args: 
     T_max: 100
     eta_min: 0
 
 # Logging
-plot:
+plot: 
   - psnr
   - ssim
   - mssim
