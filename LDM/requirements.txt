@@ -1,0 +1,13 @@
+mlflow
+wandb
+tqdm
+opencv-python
+webrtcvad #conda install -c conda-forge webrtcvad
+pickle5 #파이썬 버전이 안맞나.. 일단 4로 변경해서 다운 
+einops
+python_speech_features
+einops
+pyyaml
+matplotlib
+pandas
+utils
