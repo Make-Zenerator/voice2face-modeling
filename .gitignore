@@ -159,7 +159,28 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-./data
-.pth
-.npy
-.ipynb
+data/
+*.pth
+*.npy
+*.ipynb
+*.pkl
+*.png
+*.jpg
+*.mp4
+*.zip
+*.onnx
+*.tar
+*.ipynb
+
+.vscode/
+output/
+wandb
+log
+results
+checkpoints
+nohup*
+SimSwap/arcface_model/
+SimSwap/checkpoints/
+SimSwap/parsing_model/checkpoint/
+
+secret.py

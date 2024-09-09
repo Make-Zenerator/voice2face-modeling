@@ -1,0 +1,7 @@
+root_dir: /workspace/data_Voxceleb
+face_type: masked
+image_normalize_method: imagenet #standard
+mel_normalize_method: vox_mel
+nframe_range: (100, 150)
+split_set: train
+split_json: /workspace/data_Voxceleb/split_gender.json

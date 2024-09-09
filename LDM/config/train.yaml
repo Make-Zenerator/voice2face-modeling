@@ -1,0 +1,121 @@
+# System
+gpu_num: 0
+seed: 42
+debug: True
+verbose: False
+
+# Wandb
+project_name : voice2face
+run_name : ldm
+wandb_note : ldm
+mlflow_exp_name : xp
+# Train / val
+val_size: 0.2
+
+# Dataset
+dataset_name : OLKAVS
+OLKAVS_DIR: /workspace/data_OLKAVS/OLKAVS/data
+input_width: 256
+input_height: 256
+image_normalize: imagenet
+mel_normalize: vox_mel
+face_type: masked
+frame_width: 100
+frame_height: 150
+train_csv_path: /workspace/data_OLKAVS/OLKAVS/data/train.csv
+val_csv_path: /workspace/data_OLKAVS/OLKAVS/data/val.csv
+return_mel_segments: False
+mel_seg_width: 125
+mel_seg_height: 125
+image_avg: False
+image_flip: False
+
+# Data loader
+num_workers: 4
+shuffle: True
+drop_last: False
+
+# Trainer
+n_epochs: 100
+batch_size: 16
+
+# Model
+model: 
+  timesteps: 500
+  scheduler_name: linear
+  model_name: [UNET, SF2F, VQVAE]
+  UNET: 
+    args: 
+      image_channels: 3
+      model_channels: 64 
+      num_res_blocks: 4
+      num_heads: 4
+      dim_head: 32
+      dropout: 0.1
+  SF2F:
+    args: 
+      input_channel: 40
+      channels: [256, 384, 576, 864]
+      output_channel: 512
+      add_noise: False
+      normalize: True
+      return_seq: False
+      inception_mode: True
+  VQVAE: 
+    args: 
+      img_channels: 3
+      init_planes: 32
+      planes_mults: (1, 2, 4, 8)
+      plains_divs: (8, 4, 2, 1)
+      resnet_groups: 4
+      resnet_stacks: 2
+      up_mode: bilinear
+      scale: 2
+      attention: []
+      attn_heads: 4
+      attn_dim: 32
+      latent_dim: 4
+      eps: 1e-5
+      legacy_mid: False
+      tanh_out: False
+      num_embeddings: 256
+      z_channels: 32
+      commitment_cost: 0.2
+
+loss:
+  name: VQLPIPSWithDiscriminator
+  args: 
+    disc_conditional: false
+    disc_in_channels: 3
+    disc_start: 250001
+    disc_weight: 0.75
+    disc_num_layers: 2
+    codebook_weight: 1.0
+    disc_loss: hinge
+    preceptual_loss: lpips
+metrics: 
+  - psnr
+  - ssim
+  - mssim
+  - lpips
+  - fid
+earlystopping_target: fid
+earlystopping_patience: 5
+optimizer: 
+  name: AdamW
+  args:
+    lr: 5.0e-04
+    weight_decay: 5.0e-02
+scheduler: 
+  name: CosineAnnealingLR
+  args: 
+    T_max: 100
+    eta_min: 0
+
+# Logging
+plot: 
+  - psnr
+  - ssim
+  - mssim
+  - lpips
+  - fid
