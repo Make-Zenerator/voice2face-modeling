@@ -36,7 +36,7 @@ def evaluate(model, data_loader, options):
                                   title="[Generating Images]",
                                   width=50)):
         ######### unpack the data #########
-        imgs, log_mels, human_ids = batch
+        imgs, log_mels, human_ids, labels = batch
         imgs = imgs.cuda()
         imgs_gt.append(imgs[0])
         ###################################

@@ -8,6 +8,7 @@ import time
 import pyprind
 import glog as log
 from shutil import copyfile
+import wandb
 
 import numpy as np
 import torch
@@ -32,20 +33,28 @@ from utils.training_utils import visualize_sample
 from utils.evaluate import evaluate
 from utils.evaluate_fid import evaluate_fid
 from utils.s2f_evaluator import S2fEvaluator
+from utils.compute_metrics import get_metric_function
+from utils.wandb_logger import MetricsLogger
 torch.backends.cudnn.benchmark = True
-
+import mlflow
+import utils.connect_mlflow as connect_mlflow
 
 def main():
     global args, options
     print(args)
     print(options['data'])
+    # connect_mlflow.init_mlflow(options['mlflow'])
+    wandb.init(project='voice2face_v2')
+    wandb.run.name = options['logs']['run_name']
     # Set random seed, deterministic
+    torch.cuda.empty_cache()
     torch.cuda.manual_seed(args.seed)
     torch.manual_seed(args.seed)
     np.random.seed(args.seed)
     random.seed(args.seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     #visualize_attn=options['eval'].get('visualize_attn', False)
     #print('########### visualize_attn: {} ###########'.format(visualize_attn))
     float_dtype = torch.cuda.FloatTensor
@@ -74,7 +83,7 @@ def main():
 
     # [:len(checkpoint[term_name]['id_classifier.bias'])] class 맞추기
     # if restore_path is not None and os.path.isfile(restore_path):
-    train_loader.dataset.available_names = train_loader.dataset.available_names[:729]
+    # train_loader.dataset.available_names = train_loader.dataset.available_names[:729]
    
     # Get total number of people in training set
     num_train_id = len(train_loader.dataset)
@@ -98,7 +107,7 @@ def main():
         else:
             model.train_fuser_only()
     # End of fuser logic
-    print(model)
+    # print(model)
 
     optimizer = torch.optim.Adam(
             filter(lambda x: x.requires_grad, model.parameters()),
@@ -320,6 +329,11 @@ def main():
     # save the current config yaml
     copyfile(args.path_opts,
              os.path.join(log_path, options["logs"]["name"] + '.yaml'))
+    
+    ### wandb_loger
+    metrics = get_metric_function('all')
+    wandb_logger = MetricsLogger(wandb_config=options['data']['dataset'])
+
 
     model = nn.DataParallel(model.cuda())
     if ac_discriminator is not None:
@@ -353,6 +367,7 @@ def main():
         return 0
 
 
+    os.environ['NCLL_DEBUG'] = 'INFO'
     got_best_IS = True
     got_best_VFS = True
     got_best_R1 = True
@@ -387,10 +402,13 @@ def main():
                     (time.time() - start_time) * 1000))
             t += 1
             ######### unpack the data #########
-            imgs, log_mels, human_ids = batch
+            imgs, log_mels, human_ids, genders = batch
             imgs = imgs.cuda()
             log_mels = log_mels.type(float_dtype)
-            human_ids = human_ids.type(long_dtype)
+            if type(human_ids) == tuple:
+                human_ids = human_ids
+            else:
+                human_ids = human_ids.type(long_dtype)
             ###################################
             with timeit('forward', args.timing):
                 #model_out = model(imgs)
@@ -411,8 +429,10 @@ def main():
                     log_mels,
                     options["data"]["data_opts"]["image_normalize_method"],
                     visualize_attn=options['eval'].get('visualize_attn', False))
+                
+                wandb_logger.append_samples(epoch, samples, human_ids)
                 model.train(mode=training_status)
-                logger.image_summary(samples, t, tag="vis")
+                # logger.image_summary(samples, t, tag="vis")
 
             with timeit('G_loss', args.timing):
                 #model_boxes = None
@@ -522,6 +542,9 @@ def main():
                         total_loss = add_loss(total_loss, perceptual_loss,
                                               losses, "img_perceptual_loss",
                                               weight)
+            # with torch.no_grad():
+                # metric_score = metrics(imgs, imgs_pred, device=device)
+                # wandb_logger.append_metrics(batch_size=args.batch_size, labels=genders, metrics_scores=metric_score)
 
             losses['total_loss'] = total_loss.item()
             if not math.isfinite(losses['total_loss']):
@@ -635,14 +658,24 @@ def main():
                 for name, val in cond_d_losses.items():
                     logger.scalar_summary("d_loss/{}".format(name), val, t)
             start_time = time.time()
+            
+            # del imgs_pred
+            # del others
+            # del total_loss
+        # mlflow.pytorch.log_model(
+        #     pytorch_model=model,
+        #     artifact_path = f"sf2f_{options['data']['dataset']}_{epoch}",
+        # )
+        # wandb_logger.wandb_logging(epoch=epoch, sub_dataset='train')
 
         if epoch % args.eval_epochs == 0:
             log.info('[Epoch {}/{}] checking on val'.format(
                 epoch, args.epochs)
             )
             val_results = check_model(
-                args, options, epoch, val_loader, model)
+                args, options, epoch, val_loader, model, wandb_logger, metrics)
             val_losses, val_samples, val_inception, val_vfs = val_results
+
             # call evaluate_s2f_metrics() here
             val_facenet_L2_dist, val_facenet_L1_dist, val_facenet_cos_sim, \
                 val_recall_tuple, val_ih_sim  = \
@@ -705,7 +738,7 @@ def main():
                 val_vfs[0], epoch)
             # Add speech2face metrics here..
             #
-            logger.image_summary(val_samples, epoch, tag="ckpt_val")
+            # logger.image_summary(val_samples, epoch, tag="ckpt_val")
             # log.info('[Epoch {}/{}] val iou: {}'.format(
             # epoch, args.epochs, val_avg_iou))
             log.info('[Epoch {}/{}] val inception score: {} ({})'.format(

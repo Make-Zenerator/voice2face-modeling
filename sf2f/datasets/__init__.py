@@ -7,4 +7,5 @@ from .utils import imagenet_preprocess, imagenet_deprocess, \
 #from .coco import CocoSceneGraphDataset as coco
 #from .vg import VgSceneGraphDataset as visual_genome
 from .vox_dataset import VoxDataset
+from .build_olkavs_dataset import OLKAVSDataset
 from .build_dataset import build_dataset, build_loaders

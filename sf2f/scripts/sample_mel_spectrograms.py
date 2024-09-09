@@ -10,12 +10,12 @@ import PIL
 import sys
 sys.path.append('./')
 #print(sys.path)
-from datasets import VoxDataset, fast_mel_deprocess_batch
+from ..datasets import VoxDataset, fast_mel_deprocess_batch
 from utils.visualization.plot import plot_mel_spectrogram #get_np_plot,
 from tensorflow.io.gfile import mkdir
 
 
-VOX_DIR = os.path.join('./data', 'VoxCeleb')
+VOX_DIR = os.path.join('/workspace', 'data_Voxceleb')
 output_dir = os.path.join('./output', 'sampled_mel_spectrograms')
 mkdir(output_dir)
 
@@ -29,7 +29,7 @@ def main():
         image_normalize_method='imagenet',
         mel_normalize_method='vox_mel',
         mel_seg_window_stride=(125, 63),
-        split_set='test',
+        split_set='dev',
         split_json=os.path.join(VOX_DIR, 'split.json'))
 
     log_mels = vox_dataset.get_all_mel_segments_of_id(5)

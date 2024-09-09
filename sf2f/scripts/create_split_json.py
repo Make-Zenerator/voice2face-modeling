@@ -10,11 +10,11 @@ import os
 import json
 import pandas as pd
 
-VOX_DIR = os.path.join('./data/VoxCeleb')
-vox1_meta_csv = os.path.join(VOX_DIR, 'vox1', 'vox1_meta.csv')
+VOX_DIR = os.path.join('/workspace/data_Voxceleb')
+vox1_meta_csv = os.path.join(VOX_DIR, 'raw_wav', 'vox1', 'vox1_meta.csv')
 # vox2_meta_csv = os.path.join(VOX_DIR, 'vox2', 'full_vox2_meta.csv')
 # output:
-split_json = os.path.join(VOX_DIR, 'split.json')
+split_json = os.path.join(VOX_DIR, 'split_gender.json')
 
 
 def main():
@@ -26,17 +26,20 @@ def main():
 
     split_dict = {
         'vox1': {'train':[], 'val':[], 'test':[]},
+        'gender': [],
         # 'vox2': {'train':[], 'val':[], 'test':[]}
         }
 
     for i in range(len(vox1_df)):
         name = vox1_df['VGGFace1 ID'].iloc[i]
+        gender = vox1_df['Gender'].iloc[i]
         if i % 10 == 8:
             split_dict['vox1']['test'].append(name)
         elif i % 10 == 9:
             split_dict['vox1']['val'].append(name)
         else:
             split_dict['vox1']['train'].append(name)
+        split_dict['gender'].append(gender)
 
     # for i in range(len(vox2_df)):
     #     name = vox2_df['Name'].iloc[i]

@@ -274,7 +274,7 @@ class V2F1DCNN(nn.Module):
                  inception_mode=False,
                  segments_fusion=False,
                  normalize_fusion=False,
-                 fuser_arch='Attention',
+                 fuser_arch='AttentionFuserV1',
                  fuser_kwargs=None):
         super(V2F1DCNN, self).__init__()
         if inception_mode:
@@ -335,6 +335,7 @@ class V2F1DCNN(nn.Module):
             #    ignore_tanh=True)
             self.attn_fuser = \
                 getattr(encoder_model_collection, fuser_arch)(**fuser_kwargs)
+            pass
 
     def forward(self, x):
         # In case more than one mel segment per person is passed
@@ -393,11 +394,11 @@ class V2F1DCNN(nn.Module):
             else:
                 param.requires_grad = False
 
-    def init_attn_fusion(self):
-        self.attn_fuser = Attention(
-            self.output_channel,
-            self.output_channel,
-            ignore_tanh=True)
+    # def init_attn_fusion(self):
+    #     self.attn_fuser = Attention(
+    #         self.output_channel,
+    #         self.output_channel,
+    #         ignore_tanh=True)
 
 if __name__ == '__main__':
     import time
@@ -419,8 +420,15 @@ if __name__ == '__main__':
     v2f_id_cnn_kwargs = {
         'input_channel': 40,
         'channels': [256, 384, 576, 864],
-        'output_channel': 64,
+        'output_channel': 512,
         'segments_fusion': True,
+        "fuser_arch": "AttentionFuserV1",
+        "fuser_kwargs":{
+            "dimensions": 512,
+            "dim_out": 512,
+            "attention_type": "general",
+            "ignore_tanh": True,
+            },
         'inception_mode': True,
         }
     v2f_id_cnn_fuse = V2F1DCNN(**v2f_id_cnn_kwargs)
@@ -430,45 +438,45 @@ if __name__ == '__main__':
     v2f_id_cnn_fuse.train_fuser_only()
     v2f_id_cnn_fuse.print_trainable_param()
 
-    # test a simple transformer layer
-    trans_layer = nn.TransformerEncoderLayer(48, 8,
-        dim_feedforward=48, dropout=0.1, activation='relu')
-    print(trans_layer(pos_log_mel).shape)
+    # # test a simple transformer layer
+    # trans_layer = nn.TransformerEncoderLayer(48, 8,
+    #     dim_feedforward=48, dropout=0.1, activation='relu')
+    # print(trans_layer(pos_log_mel).shape)
 
 
-    # Transformer
-    trans_kwargs = {
-        'input_channel': 40,
-        'cnn_channels': [512, 512],
-        'transformer_dim': 512,
-        'transformer_depth': 2,
-        'return_seq': True,
-        'pos_embedding_dim': 0, #8
-        'sin_pos_encoding': True, #False
-    }
-    trans_encoder = TransEncoder(**trans_kwargs).cuda()
-    print(trans_encoder)
-    emb, seq_emb = trans_encoder(log_mels.cuda())
-    print('TransEncoder Output shape:', emb.shape, seq_emb.shape)
+    # # Transformer
+    # trans_kwargs = {
+    #     'input_channel': 40,
+    #     'cnn_channels': [512, 512],
+    #     'transformer_dim': 512,
+    #     'transformer_depth': 2,
+    #     'return_seq': True,
+    #     'pos_embedding_dim': 0, #8
+    #     'sin_pos_encoding': True, #False
+    # }
+    # trans_encoder = TransEncoder(**trans_kwargs).cuda()
+    # print(trans_encoder)
+    # emb, seq_emb = trans_encoder(log_mels.cuda())
+    # print('TransEncoder Output shape:', emb.shape, seq_emb.shape)
 
-    # Test V2F 1D CNN
-    v2f_id_cnn_kwargs = {
-        'input_channel': 40,
-        'channels': [256, 384, 576, 864],
-        'output_channel': 64,
-        }
-    v2f_id_cnn = V2F1DCNN(**v2f_id_cnn_kwargs)
-    print(v2f_id_cnn)
-    print('V2F1DCNN Output shape:', v2f_id_cnn(log_mels).shape)
+    # # Test V2F 1D CNN
+    # v2f_id_cnn_kwargs = {
+    #     'input_channel': 40,
+    #     'channels': [256, 384, 576, 864],
+    #     'output_channel': 64,
+    #     }
+    # v2f_id_cnn = V2F1DCNN(**v2f_id_cnn_kwargs)
+    # print(v2f_id_cnn)
+    # print('V2F1DCNN Output shape:', v2f_id_cnn(log_mels).shape)
 
-    # Test V2F 1D CNN Sequential Return
-    v2f_id_cnn_kwargs = {
-        'input_channel': 40,
-        'channels': [256, 384, 576, 864],
-        'output_channel': 64,
-        'return_seq': True,
-        }
-    v2f_id_cnn = V2F1DCNN(**v2f_id_cnn_kwargs)
-    print(v2f_id_cnn)
-    emb, seq_emb = v2f_id_cnn(log_mels)
-    print('V2F1DCNN Output shape:', emb.shape, seq_emb.shape)
+    # # Test V2F 1D CNN Sequential Return
+    # v2f_id_cnn_kwargs = {
+    #     'input_channel': 40,
+    #     'channels': [256, 384, 576, 864],
+    #     'output_channel': 64,
+    #     'return_seq': True,
+    #     }
+    # v2f_id_cnn = V2F1DCNN(**v2f_id_cnn_kwargs)
+    # print(v2f_id_cnn)
+    # emb, seq_emb = v2f_id_cnn(log_mels)
+    # print('V2F1DCNN Output shape:', emb.shape, seq_emb.shape)

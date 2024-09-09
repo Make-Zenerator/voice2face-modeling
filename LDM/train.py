@@ -8,7 +8,7 @@ from glob import glob
 import mlflow, wandb
 from torch.utils.data import DataLoader
 from sklearn.model_selection import train_test_split
-from config import secret
+# from config import secret
 prj_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(prj_dir)
 
@@ -34,23 +34,23 @@ if __name__ == '__main__':
     train_serial = 'debug' if config['debug'] else train_serial
     
     ##mlflow set
-    os.environ["MLFLOW_S3_ENDPOINT_URL"] = secret.MLFLOW_S3_ENDPOINT_URL
-    os.environ["MLFLOW_TRACKING_URI"] = secret.MLFLOW_TRACKING_URI
-    os.environ["AWS_ACCESS_KEY_ID"] = secret.AWS_ACCESS_KEY_ID
-    os.environ["AWS_SECRET_ACCESS_KEY"] = secret.AWS_SECRET_ACCESS_KEY
+    # os.environ["MLFLOW_S3_ENDPOINT_URL"] = secret.MLFLOW_S3_ENDPOINT_URL
+    # os.environ["MLFLOW_TRACKING_URI"] = secret.MLFLOW_TRACKING_URI
+    # os.environ["AWS_ACCESS_KEY_ID"] = secret.AWS_ACCESS_KEY_ID
+    # os.environ["AWS_SECRET_ACCESS_KEY"] = secret.AWS_SECRET_ACCESS_KEY
     
     ## wandb
-    mlflow.start_run()
-    mlflow.set_experiment(config['mlflow_exp_name'])
-    wandb.init(
-            project=config['project_name'],
-            config={
-                "architecture": config['model']['model_name'],
-                "dataset": config['dataset_name'],
-                "notes": config['wandb_note'],
-            },
-            name=config['run_name'],
-    )
+    # mlflow.start_run()
+    # mlflow.set_experiment(config['mlflow_exp_name'])
+    # wandb.init(
+    #         project=config['project_name'],
+    #         config={
+    #             "architecture": config['model']['model_name'],
+    #             "dataset": config['dataset_name'],
+    #             "notes": config['wandb_note'],
+    #         },
+    #         name=config['run_name'],
+    # )
 
     # Set random seed, deterministic
     torch.cuda.manual_seed(config['seed'])
@@ -80,20 +80,37 @@ if __name__ == '__main__':
 
     # Load data and create dataset for train 
     # Load image scaler
-    train_img_paths = glob(os.path.join(train_dirs, 'x', '*.png'))
-    train_img_paths, val_img_paths = train_test_split(train_img_paths, test_size=config['val_size'], random_state=config['seed'], shuffle=True)
+    # train_img_paths = glob(os.path.join(train_dirs, 'x', '*.png'))
+    # train_img_paths, val_img_paths = train_test_split(train_img_paths, test_size=config['val_size'], random_state=config['seed'], shuffle=True)
     
     train_dataset = get_dataset_function(config['dataset_name']) 
     val_dataset = get_dataset_function(config['dataset_name'])
     
-    train_dataset = train_dataset(paths=train_img_paths,
-                            input_size=[config['input_width'], config['input_height']],
-                            scaler=get_image_scaler(config['scaler']),
-                            logger=logger)
-    val_dataset = val_dataset(paths=val_img_paths,
-                            input_size=[config['input_width'], config['input_height']],
-                            scaler=get_image_scaler(config['scaler']),
-                            logger=logger)
+    train_dataset = train_dataset(data_dir=config['OLKAVS_DIR'],
+                                  image_size=(config['input_width'], config['input_height']),
+                                  face_type=config['face_type'],
+                                  image_normalize_method=config['image_normalize'],
+                                  mel_normalize_method=config['mel_normalize'],
+                                  nframe_range=(config['frame_width'], config['frame_height']),
+                                  split_set='train',
+                                  split_csv=config['train_csv_path'],
+                                  return_mel_segments=config['return_mel_segments'],
+                                  mel_seg_window_stride=(config['mel_seg_width'], config['mel_seg_height']),
+                                  image_left_right_avg=config['image_avg'],
+                                  image_random_hflip=config['image_flip'])
+
+    val_dataset = val_dataset(data_dir=config['OLKAVS_DIR'],
+                                  image_size=(config['input_width'], config['input_height']),
+                                  face_type=config['face_type'],
+                                  image_normalize_method=config['image_normalize'],
+                                  mel_normalize_method=config['mel_normalize'],
+                                  nframe_range=(config['frame_width'], config['frame_height']),
+                                  split_set='train',
+                                  split_csv=config['var_csv_path'],
+                                  return_mel_segments=config['return_mel_segments'],
+                                  mel_seg_window_stride=(config['mel_seg_width'], config['mel_seg_height']),
+                                  image_left_right_avg=config['image_avg'],
+                                  image_random_hflip=config['image_flip'])
     # Create data loader
     train_dataloader = DataLoader(dataset=train_dataset,
                                 batch_size=config['batch_size'],
@@ -110,7 +127,7 @@ if __name__ == '__main__':
     logger.info(f"Load dataset, train: {len(train_dataset)}, val: {len(val_dataset)}")
     
     # Load model
-    model = get_model(model_str=config['model']['model_name'])
+    model = get_model(model_str=config['model'])
     model = model(**config['model']['args']).to(device)
     logger.info(f"Load model architecture: {config['model']['model_name']}")
 

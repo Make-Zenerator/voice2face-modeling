@@ -1,0 +1,7 @@
+root_dir: /workspace/new_OLKAVS_data/data
+face_type: mfcc_image
+image_normalize_method: imagenet #standard
+mel_normalize_method: vox_mel
+nframe_range: (100, 150)
+split_set: train
+split_json: /workspace/new_OLKAVS_data/OLKVS50_train_dataset.csv

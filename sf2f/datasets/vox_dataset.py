@@ -92,7 +92,7 @@ class VoxDataset(Dataset):
         '''
         Given an index, randomly return a face and a mel_spectrogram of this guy
         '''
-        sub_dataset, name = self.available_names[index]
+        sub_dataset, name, gender = self.available_names[index]
         # Face Image
         image_dir = os.path.join(
             self.data_dir, sub_dataset, self.face_dir, name)
@@ -126,14 +126,14 @@ class VoxDataset(Dataset):
 
         human_id = torch.tensor(index)
 
-        return image, log_mel, human_id
+        return image, log_mel, human_id, gender
 
     def get_all_faces_of_id(self, index):
         '''
         Given a id, return all the faces of him as a batch tensor, with shape
         (N, C, H, W)
         '''
-        sub_dataset, name = self.available_names[index]
+        sub_dataset, name, gender = self.available_names[index]
         faces = []
         # Face Image
         image_dir = os.path.join(
@@ -157,7 +157,7 @@ class VoxDataset(Dataset):
         Given a id, return all the speech segments of him as a batch tensor,
         with shape (N, C, L)
         '''
-        sub_dataset, name = self.available_names[index]
+        sub_dataset, name, gender = self.available_names[index]
         window_length, stride_length = self.mel_seg_window_stride
         segments = []
         # Mel Spectrogram
@@ -237,9 +237,12 @@ class VoxDataset(Dataset):
                 os.path.join(self.data_dir, sub_dataset, self.face_dir))
             available = \
                 set(mel_gram_available).intersection(face_available)
-            for name in available:
+            # for name in available:
+            #     if name in self.split_dict[sub_dataset][self.split_set]:
+            #         self.available_names.append((sub_dataset, name))
+            for idx, name in enumerate(available):
                 if name in self.split_dict[sub_dataset][self.split_set]:
-                    self.available_names.append((sub_dataset, name))
+                    self.available_names.append((sub_dataset, name, self.split_dict['gender'][idx]))
 
         self.available_names.sort()
 
@@ -297,7 +300,7 @@ class VoxDataset(Dataset):
 
         batch = [(item[0],
                   self.crop_or_pad(item[1], num_frame),
-                  item[2]) for item in batch]
+                  item[2], item[3]) for item in batch]
         return default_collate(batch)
 
     def count_faces(self):
@@ -395,7 +398,7 @@ if __name__ == '__main__':
     # Collate Function dataloader test
     loader_kwargs = {
         'batch_size': 16,
-        'num_workers': 8,
+        'num_workers': 16,
         'shuffle': False,
         "drop_last": True,
         'collate_fn': vox_dataset.collate_fn,
