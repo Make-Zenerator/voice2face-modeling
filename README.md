@@ -14,14 +14,18 @@
 ```
 code
 ┣ LDM
+┃ ┃ README.md
 ┃ ┗ ...
 ┣ SimSwap
+┃ ┃ README.md
 ┃ ┗ ...
 ┣ pytorch_template
 ┃ ┗ ...
 ┣ sf2f
+┃ ┃ README.md
 ┃ ┗ ...
 ┗ wcgan-gp
+  ┃ README.md
   ┗ ...
 ┗ README.md
 ┗ requirements.txt
@@ -29,6 +33,12 @@ code
 ┗ voxceleb_download.sh
 ...
 ```
+ - 각 폴더 내부의 README 파일에 추가 설명이 있습니다.
+ - LDM: [README.md](https://github.com/Make-Zenerator/voice2face-modeling/tree/main/LDM)
+ - SimSwap: [README.md](https://github.com/Make-Zenerator/voice2face-modeling/tree/main/SimSwap)
+ - sf2f: [README.md](https://github.com/Make-Zenerator/voice2face-modeling/tree/main/sf2f)
+ - wcgan-gp: [README.md](https://github.com/Make-Zenerator/voice2face-modeling/tree/main/wcgan-gp)
+
 ## Usage
 
   
