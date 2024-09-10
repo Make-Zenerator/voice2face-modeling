@@ -56,6 +56,8 @@ code
 
 ## Usage
 
+ - Latent Diffusion: [paper](https://arxiv.org/abs/2112.10752) | [github](https://github.com/CompVis/latent-diffusion?tab=readme-ov-file)
+ - Low-Rank Adaptation: [paper](https://arxiv.org/abs/2106.09685) | [github](https://github.com/microsoft/LoRA)
   
 
 #### config
