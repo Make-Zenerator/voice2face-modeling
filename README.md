@@ -33,6 +33,7 @@ code
 ┗ voxceleb_download.sh
 ...
 ```
+
  - 각 폴더 내부의 README 파일에 추가 설명이 있습니다.
  - LDM: [README.md](https://github.com/Make-Zenerator/voice2face-modeling/tree/main/LDM)
  - SimSwap: [README.md](https://github.com/Make-Zenerator/voice2face-modeling/tree/main/SimSwap)
